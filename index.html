@@ -20,36 +20,55 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   * { -webkit-tap-highlight-color: transparent; }
+  html, body { overflow-x: hidden; max-width: 100vw; }
   body { font-family: 'Inter', sans-serif; background: #f1f5f9; transition: background 0.3s ease; }
   .dark body { background: #0f172a; }
   [x-cloak] { display: none !important; }
   .touch-target { min-height: 48px; min-width: 44px; cursor: pointer; }
-  button, .nav-item, .action-btn, .dropdown-item, [role="button"] { touch-action: manipulation; min-height: 44px; min-width: 44px; }
+  button, .action-btn, .dropdown-item, [role="button"] { touch-action: manipulation; min-height: 44px; min-width: 44px; }
   .transactions-scroll { max-height: 460px; overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; overscroll-behavior: contain; }
   .toast-slide { animation: slideUp 0.25s ease-out; }
   @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   .spinner { border: 3px solid rgba(79, 70, 229, 0.2); border-top-color: #4F46E5; border-radius: 50%; width: 32px; height: 32px; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- Bottom Nav ---------- */
   .mobile-bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(0,0,0,0.05); padding: 8px 4px;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(0,0,0,0.05);
+    padding: 6px 4px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom));
     display: none; z-index: 40;
   }
   .dark .mobile-bottom-nav { background: rgba(30, 41, 59, 0.95); border-top-color: rgba(255,255,255,0.05); }
-  @media (max-width: 640px) {
-    .desktop-tabs { display: none !important; }
-    .mobile-bottom-nav { display: flex; justify-content: space-around; }
-    .main-content-padding { padding-bottom: 88px; }
-    input, select, button { font-size: 16px !important; }
+
+  .nav-item {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2px; padding: 6px 2px;
+    border-radius: 14px;
+    font-size: 10px; font-weight: 600;
+    transition: all 0.2s ease;
+    overflow: hidden;
+    min-height: 44px;
+    touch-action: manipulation;
   }
-  @media (min-width: 641px) { .mobile-bottom-nav { display: none !important; } .desktop-tabs { display: flex !important; } }
-  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 16px; font-size: 10px; font-weight: 600; transition: all 0.2s ease; }
+  .nav-item > span:last-child {
+    max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    line-height: 1.1;
+  }
   .nav-item-active { background: rgba(79, 70, 229, 0.15); color: #4F46E5; transform: scale(0.95); }
   .dark .nav-item-active { background: rgba(79, 70, 229, 0.25); color: #818CF8; }
+
+  /* ---------- Category Suggestions ---------- */
   .category-suggestions { position: absolute; z-index: 20; width: 100%; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-height: 160px; overflow-y: auto; }
   .dark .category-suggestions { background: #1e293b; border: 1px solid #334155; }
+
+  /* ---------- Type Badges ---------- */
   .type-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
   .type-income { background: #10b98120; color: #10b981; }
   .type-expense { background: #ef444420; color: #ef4444; }
@@ -57,47 +76,100 @@
   .type-borrowed { background: #8b5cf620; color: #8b5cf6; }
   .type-investment { background: #06b6d420; color: #06b6d4; }
   .type-settlement { background: #6366f120; color: #6366f1; }
-  .dropdown-menu { position: absolute; right: 0; top: 100%; margin-top: 8px; background: white; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); min-width: 200px; z-index: 50; overflow: hidden; }
+
+  /* ---------- Dropdown (desktop popover, mobile bottom sheet) ---------- */
+  .dropdown-menu {
+    position: absolute; right: 0; top: 100%; margin-top: 8px;
+    background: white; border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+    min-width: 220px;
+    max-width: min(280px, calc(100vw - 32px));
+    z-index: 50; overflow: hidden;
+  }
   .dark .dropdown-menu { background: #1e293b; border: 1px solid #334155; }
-  .dropdown-item { padding: 10px 16px; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; cursor: pointer; font-size: 14px; }
+  .dropdown-item {
+    padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+    transition: background 0.2s ease; cursor: pointer; font-size: 14px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    min-height: 44px; touch-action: manipulation;
+  }
   .dropdown-item:hover { background: #f1f5f9; }
   .dark .dropdown-item:hover { background: #334155; }
+
+  /* ---------- Action Buttons ---------- */
   .action-btn-group { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-  .action-btn { padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; transition: all 0.2s ease; cursor: pointer; }
+  .action-btn { padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; transition: all 0.2s ease; cursor: pointer; min-height: 32px; min-width: 40px; }
   .action-btn-edit { background: #3b82f620; color: #3b82f6; }
   .action-btn-settle { background: #8b5cf620; color: #8b5cf6; }
   .action-btn-delete { background: #ef444420; color: #ef4444; }
-  .ledger-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; }
-  @media (max-width: 640px) { .action-btn-group { flex-direction: column; gap: 4px; } .action-btn { text-align: center; min-width: 60px; } }
+  .ledger-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; max-width: 100%; }
+
   .settlement-info { font-size: 10px; padding: 2px 6px; border-radius: 10px; background: #e0e7ff; color: #4338ca; }
   .dark .settlement-info { background: #312e81; color: #a5b4fc; }
   .recurring-badge { background: #10b98120; color: #10b981; font-size: 9px; padding: 2px 6px; border-radius: 20px; margin-left: 6px; }
   .demo-badge { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; font-size: 10px; padding: 2px 8px; border-radius: 20px; margin-left: 8px; }
   .dashboard-card-clickable { cursor: pointer; transition: all 0.2s ease; transform: scale(1); }
   .dashboard-card-clickable:active { transform: scale(0.97); }
+  .dashboard-card-clickable h2,
+  .dashboard-card-clickable h3 { word-break: break-word; overflow-wrap: anywhere; }
   .detail-report-modal { max-height: 70vh; overflow-y: auto; }
+
+  /* ---------- Modals ---------- */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .modal-panel { background: white; border-radius: 16px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); max-height: 90vh; display: flex; flex-direction: column; }
+  .modal-panel { background: white; border-radius: 16px; width: 100%; max-width: min(480px, calc(100vw - 24px)); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); max-height: 90vh; display: flex; flex-direction: column; }
   .dark .modal-panel { background: #1e293b; }
   .modal-header { padding: 16px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
   .dark .modal-header { border-bottom-color: #334155; }
   .modal-body { padding: 16px; overflow-y: auto; }
   .modal-footer { padding: 16px; border-top: 1px solid #e2e8f0; display: flex; gap: 12px; }
   .dark .modal-footer { border-top-color: #334155; }
-  .btn-primary { flex: 1; background: #4F46E5; color: white; padding: 12px; border-radius: 12px; font-weight: 700; }
+  .btn-primary { flex: 1; background: #4F46E5; color: white; padding: 12px; border-radius: 12px; font-weight: 700; min-height: 44px; }
   .btn-primary:hover { background: #4338CA; }
-  .btn-secondary { flex: 1; background: #e2e8f0; color: #334155; padding: 12px; border-radius: 12px; font-weight: 700; }
+  .btn-secondary { flex: 1; background: #e2e8f0; color: #334155; padding: 12px; border-radius: 12px; font-weight: 700; min-height: 44px; }
   .dark .btn-secondary { background: #334155; color: #e2e8f0; }
-  .btn-danger { flex: 1; background: #ef4444; color: white; padding: 12px; border-radius: 12px; font-weight: 700; }
+  .btn-danger { flex: 1; background: #ef4444; color: white; padding: 12px; border-radius: 12px; font-weight: 700; min-height: 44px; }
   .input-field { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #cbd5e1; font-size: 14px; background: white; }
   .dark .input-field { background: #0f172a; border-color: #334155; color: white; }
   .empty-state { text-align: center; padding: 32px 16px; color: #94a3b8; }
   .empty-state-icon { font-size: 40px; margin-bottom: 8px; }
-  /* ✅ QW1: focus-visible ring for keyboard users */
+
+  /* Focus ring for keyboard users */
   :focus-visible { outline: 2px solid #4F46E5; outline-offset: 2px; }
   .dark :focus-visible { outline-color: #818CF8; }
-  /* ✅ QW1: modal backdrop focus trap container */
-  .modal-backdrop:focus { outline: none; }
+
+  /* ---------- Breakpoints ---------- */
+  @media (max-width: 640px) {
+    .desktop-tabs { display: none !important; }
+    .mobile-bottom-nav { display: flex; justify-content: space-between; gap: 2px; }
+    .main-content-padding { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+    input, select, button { font-size: 16px !important; }
+
+    .nav-item > span:first-child { font-size: 18px; line-height: 1; }
+    .nav-item > span:last-child { font-size: 9px; letter-spacing: -0.2px; }
+
+    /* Dropdown → bottom sheet on mobile */
+    .dropdown-menu {
+      position: fixed; top: auto; left: 8px; right: 8px;
+      bottom: calc(72px + env(safe-area-inset-bottom));
+      margin-top: 0; min-width: 0; max-width: none;
+      border-radius: 16px; max-height: 60vh; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .dropdown-item { padding: 14px 16px; font-size: 15px; }
+
+    .action-btn-group { flex-direction: column; gap: 4px; }
+    .action-btn { text-align: center; min-width: 60px; }
+  }
+
+  @media (min-width: 641px) {
+    .mobile-bottom-nav { display: none !important; }
+    .desktop-tabs { display: flex !important; }
+  }
+
+  @media (max-width: 360px) {
+    .nav-item > span:last-child { display: none; }
+    .nav-item > span:first-child { font-size: 22px; }
+  }
 </style>
 </head>
 <body class="p-3 md:p-5 min-h-screen transition-colors duration-300 main-content-padding"
@@ -135,13 +207,11 @@
 </div>
 
 <!-- ============ CONFIRM MODAL ============ -->
-<!-- ✅ QW10: role/aria + ✅ QW1: escape closes + ✅ QW7: autofocus -->
 <div x-show="confirmModal.show" class="modal-backdrop" x-cloak
      role="dialog" aria-modal="true" :aria-label="confirmModal.title"
      @keydown.escape.window="resolveConfirm(false)"
-     x-trap.inert.noscroll="confirmModal.show"
-     x-ref="confirmBackdrop">
-  <div class="modal-panel max-w-sm" @click.away="false">
+     x-trap.inert.noscroll="confirmModal.show">
+  <div class="modal-panel max-w-sm">
     <div class="modal-header">
       <h3 class="font-bold text-lg" x-text="confirmModal.title"></h3>
       <button @click="resolveConfirm(false)" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
@@ -170,25 +240,25 @@
      role="dialog" aria-modal="true" :aria-label="detailModalTitle"
      @keydown.escape.window="showDetailModal = false"
      x-trap.inert.noscroll="showDetailModal">
-  <div class="modal-panel max-w-2xl">
+  <div class="modal-panel">
     <div class="modal-header">
-      <h3 class="text-xl font-bold" x-text="detailModalTitle"></h3>
-      <button @click="showDetailModal = false" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
+      <h3 class="text-lg sm:text-xl font-bold break-words" x-text="detailModalTitle"></h3>
+      <button @click="showDetailModal = false" class="text-2xl text-slate-500 flex-shrink-0" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body detail-report-modal">
       <div class="mb-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-xl">
         <div class="text-sm text-slate-600 dark:text-slate-400">Total</div>
-        <div class="text-2xl font-bold" x-text="formatCurrency(detailModalTotal)"></div>
+        <div class="text-2xl font-bold break-words" x-text="formatCurrency(detailModalTotal)"></div>
       </div>
       <div class="space-y-2">
         <template x-for="tx in detailModalTransactions" :key="tx.id || tx.desc + tx.date">
-          <div class="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg flex justify-between items-center">
-            <div>
-              <div class="font-medium text-sm" x-text="tx.desc"></div>
-              <div class="text-xs text-slate-500"
+          <div class="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg flex justify-between items-center gap-3">
+            <div class="min-w-0 flex-1">
+              <div class="font-medium text-sm truncate" x-text="tx.desc"></div>
+              <div class="text-xs text-slate-500 truncate"
                    x-text="formatDisplayDate(tx.date) + (tx.method ? ' • ' + tx.method : '') + (tx.remainingAmount ? ' • Pending: ' + formatCurrency(tx.remainingAmount) : '')"></div>
             </div>
-            <div class="font-bold text-amber-600" x-text="formatCurrency(tx.remainingAmount || tx.amt)"></div>
+            <div class="font-bold text-amber-600 whitespace-nowrap" x-text="formatCurrency(tx.remainingAmount || tx.amt)"></div>
           </div>
         </template>
         <div x-show="detailModalTransactions.length === 0" class="empty-state">
@@ -204,7 +274,6 @@
 </div>
 
 <!-- ============ LOCK SCREEN ============ -->
-<!-- ✅ QW7: autofocus password input -->
 <div x-show="showLockScreen" class="modal-backdrop" x-cloak
      role="dialog" aria-modal="true" aria-label="Session locked"
      x-trap.inert.noscroll="showLockScreen">
@@ -270,9 +339,9 @@
     <div class="modal-body space-y-3">
       <div>
         <label class="text-sm font-bold">Date Range</label>
-        <div class="flex gap-2 mt-1">
-          <input type="date" x-model="exportDateFrom" class="input-field">
-          <input type="date" x-model="exportDateTo" class="input-field">
+        <div class="flex gap-2 mt-1 flex-wrap">
+          <input type="date" x-model="exportDateFrom" class="input-field flex-1 min-w-[140px]">
+          <input type="date" x-model="exportDateTo" class="input-field flex-1 min-w-[140px]">
         </div>
       </div>
       <div>
@@ -377,8 +446,8 @@
     <div class="modal-body space-y-3">
       <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
         <div class="text-xs text-slate-500">Original</div>
-        <div class="font-bold text-sm" x-text="settleForm.originalDesc"></div>
-        <div class="flex justify-between mt-1 text-xs">
+        <div class="font-bold text-sm break-words" x-text="settleForm.originalDesc"></div>
+        <div class="flex justify-between mt-1 text-xs flex-wrap gap-1">
           <span>Total: <b x-text="formatCurrency(settleForm.originalAmount)"></b></span>
           <span>Remaining: <b class="text-amber-600" x-text="formatCurrency(settleForm.remainingAmount)"></b></span>
         </div>
@@ -503,25 +572,54 @@
 <div x-show="isLoggedIn" class="w-full max-w-6xl mx-auto space-y-4 pb-6" x-cloak>
   <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg overflow-hidden">
     <!-- Header -->
-    <div class="p-4 flex justify-between items-center border-b dark:border-slate-700 flex-wrap gap-2">
-      <div>
-        <h1 class="text-2xl font-black bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent">Smart Personal Finance Manager</h1>
-        <p class="text-xs">Hi, <span class="font-bold text-indigo-500" x-text="user?.username"></span><span class="demo-badge" x-show="user?.username === 'admin'">Admin</span></p>
+    <div class="p-4 border-b dark:border-slate-700">
+      <!-- Row 1: title + greeting -->
+      <div class="flex justify-between items-start gap-2 mb-3">
+        <div class="min-w-0 flex-1">
+          <h1 class="text-xl sm:text-2xl font-black bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent leading-tight">
+            Smart Personal Finance Manager
+          </h1>
+          <p class="text-xs mt-0.5">
+            Hi, <span class="font-bold text-indigo-500" x-text="user?.username"></span>
+            <span class="demo-badge" x-show="user?.username === 'admin'">Admin</span>
+          </p>
+        </div>
+        <div x-show="isSyncing" class="spinner w-4 h-4 flex-shrink-0 mt-2" role="status" aria-label="Syncing"></div>
       </div>
-      <div class="flex gap-2 items-center flex-wrap">
-        <button id="pwaInstallButton" hidden class="bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold">⬇ Install App</button>
-        <div x-show="isSyncing" class="spinner w-4 h-4" role="status" aria-label="Syncing"></div>
-        <button @click="toggleDarkMode" class="bg-slate-100 dark:bg-slate-700 p-2 rounded-full w-10 h-10" :title="darkMode ? 'Light mode' : 'Dark mode'" :aria-label="darkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+
+      <!-- Row 2: action buttons -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <button id="pwaInstallButton" hidden
+                class="bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold">⬇ Install</button>
+
+        <button @click="toggleDarkMode"
+                class="bg-slate-100 dark:bg-slate-700 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                :title="darkMode ? 'Light mode' : 'Dark mode'"
+                :aria-label="darkMode ? 'Switch to light mode' : 'Switch to dark mode'">
           <span x-text="darkMode ? '☀️' : '🌙'"></span>
         </button>
-        <button @click="showShortcuts = true" class="bg-slate-100 dark:bg-slate-700 p-2 rounded-full w-10 h-10" aria-label="Keyboard shortcuts">⌨️</button>
-        <button @click="showOpeningBalanceModal = true" class="bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 px-3 py-2 rounded-xl text-xs font-bold">🏁 Opening</button>
-        <div class="relative">
-          <button @click="toggleDropdown()" class="bg-slate-100 dark:bg-slate-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2" aria-haspopup="true" :aria-expanded="dropdownOpen">
-            ⋯ Actions
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+
+        <button @click="showShortcuts = true"
+                class="bg-slate-100 dark:bg-slate-700 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                aria-label="Keyboard shortcuts">⌨️</button>
+
+        <button @click="showOpeningBalanceModal = true"
+                class="bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 flex items-center gap-1">
+          🏁 <span class="hidden sm:inline">Opening</span>
+        </button>
+
+        <div class="relative ml-auto">
+          <button @click="toggleDropdown()"
+                  class="bg-slate-100 dark:bg-slate-700 px-3 sm:px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 flex-shrink-0"
+                  aria-haspopup="true" :aria-expanded="dropdownOpen">
+            ⋯ <span class="hidden sm:inline">Actions</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
           </button>
-          <div x-show="dropdownOpen" @click.away="dropdownOpen = false" @keydown.escape.window="dropdownOpen = false" class="dropdown-menu" role="menu">
+          <div x-show="dropdownOpen" @click.away="dropdownOpen = false"
+               @keydown.escape.window="dropdownOpen = false"
+               class="dropdown-menu" role="menu">
             <div class="dropdown-item" @click="exportData(); dropdownOpen=false" role="menuitem">💾 Backup (JSON)</div>
             <div class="dropdown-item" @click="triggerImport(); dropdownOpen=false" role="menuitem">📂 Import JSON</div>
             <label class="dropdown-item cursor-pointer" role="menuitem">📎 Import Excel<input type="file" class="hidden" accept=".xlsx,.xls,.csv" @change="importFromExcel"></label>
@@ -540,7 +638,7 @@
       <span><b>Sandbox mode:</b> Local storage is unavailable. Your data will be lost when you close this tab. Open this file directly in a browser to persist.</span>
     </div>
 
-    <!-- ✅ QW5: Desktop Tabs generated from TABS config -->
+    <!-- Desktop Tabs -->
     <div class="desktop-tabs flex border-b dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 overflow-x-auto" role="tablist">
       <template x-for="tab in TABS" :key="tab.id">
         <button @click="activeTab = tab.id" role="tab" :aria-selected="activeTab === tab.id"
@@ -551,10 +649,11 @@
       </template>
     </div>
 
-    <!-- ✅ QW5: Mobile Bottom Nav generated from TABS config -->
+    <!-- Mobile Bottom Nav -->
     <div class="mobile-bottom-nav" role="tablist">
       <template x-for="tab in TABS" :key="'m-' + tab.id">
         <button @click="activeTab=tab.id" role="tab" :aria-selected="activeTab === tab.id"
+                :aria-label="tab.label"
                 :class="activeTab===tab.id ? 'nav-item-active' : ''" class="nav-item">
           <span x-text="tab.icon" aria-hidden="true"></span><span x-text="tab.mobileLabel"></span>
         </button>
@@ -565,9 +664,9 @@
     <div x-show="activeTab === 'dashboard'" class="p-4 space-y-5" x-cloak>
       <div class="bg-gradient-to-r from-cyan-600 to-blue-700 text-white p-4 rounded-2xl">
         <div class="flex justify-between flex-wrap gap-2">
-          <div>
+          <div class="min-w-0 flex-1">
             <p class="text-[10px] uppercase opacity-80">Opening Balances</p>
-            <div class="flex gap-4 mt-1 text-sm flex-wrap">
+            <div class="flex gap-x-4 gap-y-1 mt-1 text-sm flex-wrap">
               <span>🏦 Bank: <b x-text="formatCurrency(openingBalances.bank)"></b></span>
               <span>💵 Cash: <b x-text="formatCurrency(openingBalances.cash)"></b></span>
               <span>📈 Investment: <b x-text="formatCurrency(openingBalances.investment)"></b></span>
@@ -580,7 +679,7 @@
       <div x-show="budgetAlert.show" class="bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-500 p-3 rounded-xl" role="alert">
         <div class="flex items-center gap-2">
           <span>⚠️</span>
-          <span class="text-sm" x-text="budgetAlert.message"></span>
+          <span class="text-sm break-words" x-text="budgetAlert.message"></span>
         </div>
       </div>
 
@@ -593,27 +692,27 @@
         </div>
         <div class="bg-blue-600 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('bank')">
           <small class="text-[11px]">🏦 Bank Balance</small>
-          <h3 class="text-xl font-bold" x-text="formatCurrency(totals.bank)"></h3>
+          <h3 class="text-lg sm:text-xl font-bold" x-text="formatCurrency(totals.bank)"></h3>
           <span class="text-[9px] opacity-70">Tap for bank statement</span>
         </div>
         <div class="bg-emerald-600 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('cash')">
           <small class="text-[11px]">💵 Cash Balance</small>
-          <h3 class="text-xl font-bold" x-text="formatCurrency(totals.cash)"></h3>
+          <h3 class="text-lg sm:text-xl font-bold" x-text="formatCurrency(totals.cash)"></h3>
           <span class="text-[9px] opacity-70">Tap for cash statement</span>
         </div>
         <div class="bg-amber-500 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('receivable')">
           <small class="text-[11px]">💰 Receivable (Lent)</small>
-          <h3 class="text-xl font-bold" x-text="formatCurrency(totals.lent)"></h3>
+          <h3 class="text-lg sm:text-xl font-bold" x-text="formatCurrency(totals.lent)"></h3>
           <span class="text-[9px] opacity-70">Tap for pending lent</span>
         </div>
         <div class="bg-purple-600 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('payable')">
           <small class="text-[11px]">📋 Payable (Borrowed)</small>
-          <h3 class="text-xl font-bold" x-text="formatCurrency(totals.debt)"></h3>
+          <h3 class="text-lg sm:text-xl font-bold" x-text="formatCurrency(totals.debt)"></h3>
           <span class="text-[9px] opacity-70">Tap for pending borrowed</span>
         </div>
         <div class="col-span-2 bg-cyan-600 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('investment')">
           <small class="text-[11px]">📈 Investments</small>
-          <h3 class="text-xl font-bold" x-text="formatCurrency(totals.investment)"></h3>
+          <h3 class="text-lg sm:text-xl font-bold" x-text="formatCurrency(totals.investment)"></h3>
           <span class="text-[9px] opacity-70">Tap for investment history</span>
         </div>
       </div>
@@ -684,7 +783,7 @@
     <div x-show="activeTab === 'ledger'" class="p-4" x-cloak>
       <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm">
         <div class="p-3 flex gap-2 flex-wrap">
-          <input type="text" id="ledgerSearchInput" x-model="ledgerSearch" @input="debouncedLedgerSearch()" placeholder="Search..." class="input-field flex-1">
+          <input type="text" id="ledgerSearchInput" x-model="ledgerSearch" @input="debouncedLedgerSearch()" placeholder="Search..." class="input-field flex-1 min-w-[120px]">
           <select x-model="ledgerTypeFilter" @change="refreshLedger()" class="input-field w-auto">
             <option value="all">All</option>
             <option value="income">Income</option>
@@ -770,7 +869,7 @@
           <option value="settlement">Settlement</option>
           <option value="investment">Investment</option>
         </select>
-        <input type="text" id="txSearchInput" x-model="search" @input="handleSearchDebounced()" placeholder="Search..." class="input-field flex-1">
+        <input type="text" id="txSearchInput" x-model="search" @input="handleSearchDebounced()" placeholder="Search..." class="input-field flex-1 min-w-[120px]">
       </div>
       <div class="space-y-2 max-h-[520px] overflow-auto transactions-scroll">
         <template x-for="t in paginatedTxs()" :key="t.id">
@@ -778,7 +877,7 @@
             <div class="flex justify-between gap-2">
               <div class="min-w-0 flex-1">
                 <div class="font-bold text-sm truncate" x-text="t.desc"></div>
-                <div class="text-xs text-slate-500" x-text="formatDisplayDate(t.date)+' • '+t.method + (t.category ? ' • ' + t.category : '')"></div>
+                <div class="text-xs text-slate-500 truncate" x-text="formatDisplayDate(t.date)+' • '+t.method + (t.category ? ' • ' + t.category : '')"></div>
               </div>
               <div class="font-bold whitespace-nowrap"
                    :class="{'text-emerald-600':t.type==='income' || (t.type==='settlement' && t.settlementFor==='lent'),'text-rose-600':t.type==='expense' || (t.type==='settlement' && t.settlementFor==='borrowed')}"
@@ -820,15 +919,15 @@
       <div class="grid grid-cols-2 gap-3 mt-4">
         <div class="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-xl">
           <p class="text-xs text-slate-600 dark:text-slate-300">Income</p>
-          <p class="font-bold text-emerald-600 dark:text-emerald-400" x-text="formatCurrency(reportStats.totalIncome)"></p>
+          <p class="font-bold text-emerald-600 dark:text-emerald-400 break-words" x-text="formatCurrency(reportStats.totalIncome)"></p>
         </div>
         <div class="bg-rose-50 dark:bg-rose-900/30 p-3 rounded-xl">
           <p class="text-xs text-slate-600 dark:text-slate-300">Expense</p>
-          <p class="font-bold text-rose-600 dark:text-rose-400" x-text="formatCurrency(reportStats.totalExpense)"></p>
+          <p class="font-bold text-rose-600 dark:text-rose-400 break-words" x-text="formatCurrency(reportStats.totalExpense)"></p>
         </div>
         <div class="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-xl col-span-2">
           <p class="text-xs text-slate-600 dark:text-slate-300">Net Savings</p>
-          <p class="font-bold text-indigo-600 dark:text-indigo-300" x-text="formatCurrency(reportStats.totalIncome - reportStats.totalExpense)"></p>
+          <p class="font-bold text-indigo-600 dark:text-indigo-300 break-words" x-text="formatCurrency(reportStats.totalIncome - reportStats.totalExpense)"></p>
         </div>
       </div>
     </div>
@@ -841,10 +940,10 @@
           <div class="bg-white dark:bg-slate-700 p-3 rounded-xl flex justify-between items-center gap-2">
             <div class="min-w-0 flex-1">
               <div class="font-bold text-sm truncate" x-text="rt.desc"></div>
-              <div class="text-xs text-slate-500"
+              <div class="text-xs text-slate-500 break-words"
                    x-text="formatCurrency(rt.amt) + ' • ' + rt.type + ' • ' + rt.frequency + ' • Next: ' + formatDisplayDate(rt.nextDueDate) + (rt.active === false ? ' • ⏸ Inactive' : '')"></div>
             </div>
-            <div class="flex gap-2">
+            <div class="flex gap-2 flex-shrink-0">
               <button @click="openRecurringModal(rt)" class="text-blue-600 text-sm font-bold">Edit</button>
               <button @click="deleteRecurring(rt.id)" class="text-rose-500 text-sm font-bold">Delete</button>
             </div>
@@ -863,9 +962,9 @@
         <h3 class="font-bold mb-3">Top Spending Categories</h3>
         <template x-for="cat in topSpendingCategories" :key="cat.category">
           <div class="mb-2">
-            <div class="flex justify-between text-sm">
-              <span x-text="cat.category"></span>
-              <span x-text="formatCurrency(cat.amount)"></span>
+            <div class="flex justify-between text-sm gap-2">
+              <span class="truncate" x-text="cat.category"></span>
+              <span class="whitespace-nowrap" x-text="formatCurrency(cat.amount)"></span>
             </div>
             <div class="bg-gray-200 dark:bg-slate-600 rounded-full h-2 overflow-hidden mt-1">
               <div class="bg-rose-500 h-2 rounded-full transition-all duration-500"
@@ -885,11 +984,13 @@
   </div>
 </div>
 
-<!-- Hidden file input for JSON import (inside Alpine scope) -->
+<!-- Hidden file input for JSON import -->
 <input type="file" id="fileInput" class="hidden" accept=".json" @change="importData">
 
 <script>
-// ✅ QW6: Central configuration object
+// ============================================================
+// ✅ QW6: Central configuration
+// ============================================================
 const CONFIG = {
   IDLE_LOCK_MS: 30 * 60 * 1000,
   RECURRING_GUARD_MAX: 500,
@@ -905,22 +1006,23 @@ const CONFIG = {
   CURRENCY: 'INR'
 };
 
+// ============================================================
 // ✅ QW5: Single source of truth for tabs
+// ============================================================
 const TABS = [
   { id: 'dashboard',    icon: '📊', label: 'Dashboard',    mobileLabel: 'Home' },
   { id: 'ledger',       icon: '📒', label: 'Ledger',       mobileLabel: 'Ledger' },
   { id: 'transactions', icon: '📋', label: 'Transactions', mobileLabel: 'Txns' },
   { id: 'reports',      icon: '📈', label: 'Reports',      mobileLabel: 'Reports' },
   { id: 'recurring',    icon: '🔄', label: 'Recurring',    mobileLabel: 'Repeat' },
-  { id: 'insights',     icon: '💡', label: 'Insights',     mobileLabel: 'Insights' }
+  { id: 'insights',     icon: '💡', label: 'Insights',     mobileLabel: 'More' }
 ];
 
 function budgetApp() {
   return {
-    // ✅ QW5: expose TABS to template
     TABS,
 
-    // ===== Auth state =====
+    // ===== Auth =====
     isLoggedIn: false,
     authMode: 'login',
     user: null,
@@ -928,7 +1030,7 @@ function budgetApp() {
     registerForm: { name: '', mobile: '', email: '', username: '', password: '' },
     rememberMe: false,
 
-    // ===== UI state =====
+    // ===== UI =====
     darkMode: false,
     isLoading: false,
     isSyncing: false,
@@ -1018,7 +1120,7 @@ function budgetApp() {
     _ledgerCache: [],
     _totalsCache: null,
     _totalsKey: '',
-    // ✅ QW2: revision counter for cache invalidation
+    // ✅ QW2: revision counter
     _revision: 0,
     ledgerSearchDebounceTimer: null,
     searchDebounceTimer: null,
@@ -1175,7 +1277,7 @@ function budgetApp() {
         this.lsSet('budget_users', JSON.stringify(users));
       }
 
-      // ✅ QW8: prefer saved preference, else prefers-color-scheme
+      // ✅ QW8: prefers-color-scheme fallback
       const savedDark = this.lsGet('darkMode');
       if (savedDark === 'true') this.darkMode = true;
       else if (savedDark === 'false') this.darkMode = false;
@@ -1212,8 +1314,7 @@ function budgetApp() {
       this.$watch('ledgerTypeFilter', () => this.refreshLedger());
       this.$watch('ledgerSort', () => this.refreshLedger());
 
-      // ✅ QW1: Esc closes dropdown/shortcuts globally; but NOT when modal handles it
-      // ✅ QW7: keyboard shortcuts blocked while modals open
+      // ✅ QW1 / QW7: global keyboard — respects modal state
       this._keydownHandler = (e) => {
         if (!this.isLoggedIn) return;
         const inModal = this.confirmModal.show || this.showLockScreen || this.showShortcuts ||
@@ -1227,11 +1328,9 @@ function budgetApp() {
         }
         if (e.key === 'Escape') {
           this.dropdownOpen = false;
-          // Only close shortcuts if no other modal open
           if (this.showShortcuts && !inModal) this.showShortcuts = false;
           return;
         }
-        // Block all nav shortcuts while a modal is open
         if (inModal) return;
 
         if (e.key === '/') {
@@ -1267,7 +1366,6 @@ function budgetApp() {
           return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
       } catch (e) { /* fall through */ }
-      // ✅ QW-fix: salt with fixed prefix (still demo-grade but explicit)
       let h = 0;
       const s = 'budget:v1:' + pw;
       for (let i = 0; i < s.length; i++) {
@@ -1333,7 +1431,6 @@ function budgetApp() {
     setupIdleLock() {
       if (this._idleTimer) clearTimeout(this._idleTimer);
       if (this._idleHandlers) {
-        // ✅ QW-fix: remove previous handlers to avoid stacking
         Object.entries(this._idleHandlers).forEach(([ev, fn]) => window.removeEventListener(ev, fn));
       }
       const reset = () => {
@@ -1342,7 +1439,6 @@ function budgetApp() {
           if (this.isLoggedIn) {
             this.showLockScreen = true;
             this.lockPassword = '';
-            // ✅ QW7: focus lock input once rendered
             this.$nextTick(() => this.$refs.lockInput?.focus());
           }
         }, CONFIG.IDLE_LOCK_MS);
@@ -1463,7 +1559,6 @@ function budgetApp() {
       this._totalsCache = null;
       this._totalsKey = '';
       this._revision++;
-      // ✅ QW-fix: reset pagination & forms too
       this.currentPage = 1;
       this.ledgerCurrentPage = 1;
       this.resetForm();
@@ -1595,7 +1690,7 @@ function budgetApp() {
     // SETTLE
     // ============================================================
     openSettleForm(tx) {
-      // ✅ QW3: guard — only lent/borrowed may be settled
+      // ✅ QW3: only lent/borrowed may be settled
       if (tx.type !== 'lent' && tx.type !== 'borrowed') {
         this.showToast('Only lent/borrowed can be settled', 'error');
         return;
@@ -1625,7 +1720,7 @@ function budgetApp() {
 
       const orig = this.txs.find(t => t.id === this.settleForm.transactionId);
       if (!orig) { this.showToast('Original not found', 'error'); return; }
-      // ✅ QW3: guard again at processing time
+      // ✅ QW3: re-validate at processing time
       if (orig.type !== 'lent' && orig.type !== 'borrowed') {
         this.showToast('Invalid transaction type for settlement', 'error');
         return;
@@ -1789,7 +1884,6 @@ function budgetApp() {
         this.refreshLedger();
         this.showToast(`Generated ${added} recurring transaction(s)`, 'info');
       } else {
-        // still persist any active->inactive change
         this.recurringTransactions = updatedRecurring;
       }
     },
@@ -1978,7 +2072,7 @@ function budgetApp() {
       XLSX.writeFile(wb, `budget_${Date.now()}.xlsx`);
     },
 
-    // ✅ QW4: escape HTML in PDF to prevent XSS
+    // ✅ QW4: escape HTML in PDF
     _escapeHtml(v) {
       return String(v ?? '')
         .replace(/&/g, '&amp;')
@@ -2130,7 +2224,6 @@ function budgetApp() {
 
     showConfirm(title, message, cb, requireText = '') {
       this.confirmModal = { show: true, title, message, requireText, inputValue: '', _resolve: cb };
-      // ✅ QW7: focus required-text input if present
       if (requireText) this.$nextTick(() => this.$refs.confirmInput?.focus());
     },
 
