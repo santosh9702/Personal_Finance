@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=yes">
+<meta name="theme-color" content="#4F46E5">
+<meta name="description" content="Smart Personal Finance Manager — track income, expenses, budgets and balances.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Personal Budget">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Smart Personal Finance Manager</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Inter', sans-serif; background: #f1f5f9; transition: background 0.3s ease; }
+  .dark body { background: #0f172a; }
+  [x-cloak] { display: none !important; }
+  .touch-target { min-height: 48px; min-width: 44px; cursor: pointer; }
+  button, .nav-item, .action-btn, .dropdown-item, [role="button"] { touch-action: manipulation; min-height: 44px; min-width: 44px; }
+  .transactions-scroll { max-height: 460px; overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; overscroll-behavior: contain; }
+  .toast-slide { animation: slideUp 0.25s ease-out; }
+  @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .spinner { border: 3px solid rgba(79, 70, 229, 0.2); border-top-color: #4F46E5; border-radius: 50%; width: 32px; height: 32px; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .mobile-bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0,0,0,0.05); padding: 8px 4px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    display: none; z-index: 40;
+  }
+  .dark .mobile-bottom-nav { background: rgba(30, 41, 59, 0.95); border-top-color: rgba(255,255,255,0.05); }
+  @media (max-width: 640px) {
+    .desktop-tabs { display: none !important; }
+    .mobile-bottom-nav { display: flex; justify-content: space-around; }
+    .main-content-padding { padding-bottom: 88px; }
+    input, select, button { font-size: 16px !important; }
+  }
+  @media (min-width: 641px) { .mobile-bottom-nav { display: none !important; } .desktop-tabs { display: flex !important; } }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 16px; font-size: 10px; font-weight: 600; transition: all 0.2s ease; }
+  .nav-item-active { background: rgba(79, 70, 229, 0.15); color: #4F46E5; transform: scale(0.95); }
+  .dark .nav-item-active { background: rgba(79, 70, 229, 0.25); color: #818CF8; }
+  .category-suggestions { position: absolute; z-index: 20; width: 100%; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-height: 160px; overflow-y: auto; }
+  .dark .category-suggestions { background: #1e293b; border: 1px solid #334155; }
+  .type-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
+  .type-income { background: #10b98120; color: #10b981; }
+  .type-expense { background: #ef444420; color: #ef4444; }
+  .type-lent { background: #f59e0b20; color: #f59e0b; }
+  .type-borrowed { background: #8b5cf620; color: #8b5cf6; }
+  .type-investment { background: #06b6d420; color: #06b6d4; }
+  .type-settlement { background: #6366f120; color: #6366f1; }
+  .dropdown-menu { position: absolute; right: 0; top: 100%; margin-top: 8px; background: white; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); min-width: 200px; z-index: 50; overflow: hidden; }
+  .dark .dropdown-menu { background: #1e293b; border: 1px solid #334155; }
+  .dropdown-item { padding: 10px 16px; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; cursor: pointer; font-size: 14px; }
+  .dropdown-item:hover { background: #f1f5f9; }
+  .dark .dropdown-item:hover { background: #334155; }
+  .action-btn-group { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .action-btn { padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; transition: all 0.2s ease; cursor: pointer; }
+  .action-btn-edit { background: #3b82f620; color: #3b82f6; }
+  .action-btn-settle { background: #8b5cf620; color: #8b5cf6; }
+  .action-btn-delete { background: #ef444420; color: #ef4444; }
+  .ledger-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; }
+  @media (max-width: 640px) { .action-btn-group { flex-direction: column; gap: 4px; } .action-btn { text-align: center; min-width: 60px; } }
+  .settlement-info { font-size: 10px; padding: 2px 6px; border-radius: 10px; background: #e0e7ff; color: #4338ca; }
+  .dark .settlement-info { background: #312e81; color: #a5b4fc; }
+  .recurring-badge { background: #10b98120; color: #10b981; font-size: 9px; padding: 2px 6px; border-radius: 20px; margin-left: 6px; }
+  .demo-badge { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; font-size: 10px; padding: 2px 8px; border-radius: 20px; margin-left: 8px; }
+  .dashboard-card-clickable { cursor: pointer; transition: all 0.2s ease; transform: scale(1); }
+  .dashboard-card-clickable:active { transform: scale(0.97); }
+  .detail-report-modal { max-height: 70vh; overflow-y: auto; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal-panel { background: white; border-radius: 16px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); max-height: 90vh; display: flex; flex-direction: column; }
+  .dark .modal-panel { background: #1e293b; }
+  .modal-header { padding: 16px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+  .dark .modal-header { border-bottom-color: #334155; }
+  .modal-body { padding: 16px; overflow-y: auto; }
+  .modal-footer { padding: 16px; border-top: 1px solid #e2e8f0; display: flex; gap: 12px; }
+  .dark .modal-footer { border-top-color: #334155; }
+  .btn-primary { flex: 1; background: #4F46E5; color: white; padding: 12px; border-radius: 12px; font-weight: 700; }
+  .btn-primary:hover { background: #4338CA; }
+  .btn-secondary { flex: 1; background: #e2e8f0; color: #334155; padding: 12px; border-radius: 12px; font-weight: 700; }
+  .dark .btn-secondary { background: #334155; color: #e2e8f0; }
+  .btn-danger { flex: 1; background: #ef4444; color: white; padding: 12px; border-radius: 12px; font-weight: 700; }
+  .input-field { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #cbd5e1; font-size: 14px; background: white; }
+  .dark .input-field { background: #0f172a; border-color: #334155; color: white; }
+  .empty-state { text-align: center; padding: 32px 16px; color: #94a3b8; }
+  .empty-state-icon { font-size: 40px; margin-bottom: 8px; }
+  /* ✅ QW1: focus-visible ring for keyboard users */
+  :focus-visible { outline: 2px solid #4F46E5; outline-offset: 2px; }
+  .dark :focus-visible { outline-color: #818CF8; }
+  /* ✅ QW1: modal backdrop focus trap container */
+  .modal-backdrop:focus { outline: none; }
+</style>
+</head>
+<body class="p-3 md:p-5 min-h-screen transition-colors duration-300 main-content-padding"
+      x-data="budgetApp()"
+      x-init="init()"
+      :class="darkMode ? 'dark' : ''">
+
+<!-- Loading Overlay -->
+<div x-show="isLoading" class="modal-backdrop" x-cloak role="dialog" aria-modal="true" aria-label="Loading">
+  <div class="modal-panel max-w-xs p-6 flex flex-col items-center">
+    <div class="spinner"></div>
+    <p class="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300" x-text="loadingMessage || 'Loading...'"></p>
+  </div>
+</div>
+
+<!-- Undo Toast -->
+<div x-show="undoToast.show" x-transition.duration.200ms
+     class="fixed bottom-24 left-4 right-4 z-[60] flex justify-center pointer-events-none md:bottom-5" x-cloak>
+  <div class="bg-slate-800 dark:bg-slate-700 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm font-semibold pointer-events-auto max-w-md">
+    <span>🗑️</span>
+    <span class="flex-1" x-text="undoToast.message"></span>
+    <button @click="undoDelete()" class="bg-indigo-500 hover:bg-indigo-600 px-3 py-1 rounded-lg text-xs font-bold">UNDO</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div x-show="toast.show" x-transition.duration.200ms
+     class="fixed bottom-20 left-4 right-4 z-50 flex justify-center pointer-events-none md:bottom-5" x-cloak
+     role="status" aria-live="polite">
+  <div :class="toast.type === 'success' ? 'bg-emerald-500' : toast.type === 'error' ? 'bg-rose-500' : toast.type === 'warning' ? 'bg-amber-500' : 'bg-sky-500'"
+       class="text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 text-sm font-semibold pointer-events-auto max-w-[90%]">
+    <span x-text="toast.icon"></span>
+    <span x-text="toast.message" class="flex-1"></span>
+  </div>
+</div>
+
+<!-- ============ CONFIRM MODAL ============ -->
+<!-- ✅ QW10: role/aria + ✅ QW1: escape closes + ✅ QW7: autofocus -->
+<div x-show="confirmModal.show" class="modal-backdrop" x-cloak
+     role="dialog" aria-modal="true" :aria-label="confirmModal.title"
+     @keydown.escape.window="resolveConfirm(false)"
+     x-trap.inert.noscroll="confirmModal.show"
+     x-ref="confirmBackdrop">
+  <div class="modal-panel max-w-sm" @click.away="false">
+    <div class="modal-header">
+      <h3 class="font-bold text-lg" x-text="confirmModal.title"></h3>
+      <button @click="resolveConfirm(false)" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-sm text-slate-600 dark:text-slate-300" x-text="confirmModal.message"></p>
+      <div x-show="confirmModal.requireText" class="mt-3">
+        <input type="text" x-model="confirmModal.inputValue" :placeholder="'Type ' + confirmModal.requireText + ' to confirm'"
+               class="input-field font-mono" x-ref="confirmInput">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button @click="resolveConfirm(false)" class="btn-secondary">Cancel</button>
+      <button @click="resolveConfirm(true)" class="btn-danger"
+              :disabled="confirmModal.requireText && confirmModal.inputValue !== confirmModal.requireText"
+              :aria-disabled="confirmModal.requireText && confirmModal.inputValue !== confirmModal.requireText"
+              :class="(confirmModal.requireText && confirmModal.inputValue !== confirmModal.requireText) ? 'opacity-50 cursor-not-allowed' : ''">
+        Confirm
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DETAIL REPORT MODAL ============ -->
+<div x-show="showDetailModal" class="modal-backdrop" x-cloak
+     role="dialog" aria-modal="true" :aria-label="detailModalTitle"
+     @keydown.escape.window="showDetailModal = false"
+     x-trap.inert.noscroll="showDetailModal">
+  <div class="modal-panel max-w-2xl">
+    <div class="modal-header">
+      <h3 class="text-xl font-bold" x-text="detailModalTitle"></h3>
+      <button @click="showDetailModal = false" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body detail-report-modal">
+      <div class="mb-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-xl">
+        <div class="text-sm text-slate-600 dark:text-slate-400">Total</div>
+        <div class="text-2xl font-bold" x-text="formatCurrency(detailModalTotal)"></div>
+      </div>
+      <div class="space-y-2">
+        <template x-for="tx in detailModalTransactions" :key="tx.id || tx.desc + tx.date">
+          <div class="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg flex justify-between items-center">
+            <div>
+              <div class="font-medium text-sm" x-text="tx.desc"></div>
+              <div class="text-xs text-slate-500"
+                   x-text="formatDisplayDate(tx.date) + (tx.method ? ' • ' + tx.method : '') + (tx.remainingAmount ? ' • Pending: ' + formatCurrency(tx.remainingAmount) : '')"></div>
+            </div>
+            <div class="font-bold text-amber-600" x-text="formatCurrency(tx.remainingAmount || tx.amt)"></div>
+          </div>
+        </template>
+        <div x-show="detailModalTransactions.length === 0" class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          No transactions found
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button @click="showDetailModal = false" class="btn-primary">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LOCK SCREEN ============ -->
+<!-- ✅ QW7: autofocus password input -->
+<div x-show="showLockScreen" class="modal-backdrop" x-cloak
+     role="dialog" aria-modal="true" aria-label="Session locked"
+     x-trap.inert.noscroll="showLockScreen">
+  <div class="modal-panel">
+    <div class="modal-body text-center">
+      <div class="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/50 rounded-full mx-auto flex items-center justify-center mb-3">
+        <span class="text-4xl">🔒</span>
+      </div>
+      <h3 class="text-xl font-bold text-slate-800 dark:text-white">Session Locked</h3>
+      <p class="text-sm text-slate-500 mt-1">Session locked due to inactivity</p>
+    </div>
+    <div class="modal-body pt-0 space-y-3">
+      <input type="password" x-model="lockPassword" placeholder="Enter password to unlock"
+             class="input-field" @keyup.enter="unlockSession()"
+             x-ref="lockInput" autofocus>
+      <button @click="unlockSession()" class="btn-primary w-full">Unlock Session</button>
+      <button @click="logout()" class="btn-secondary w-full">Logout Instead</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CATEGORY MANAGER MODAL ============ -->
+<div x-show="showCategoryModal" class="modal-backdrop" x-cloak
+     role="dialog" aria-modal="true" aria-label="Manage categories"
+     @keydown.escape.window="showCategoryModal = false"
+     x-trap.inert.noscroll="showCategoryModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 class="text-xl font-bold">🏷️ Manage Categories</h3>
+      <button @click="showCategoryModal = false" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="flex gap-2 mb-4">
+        <input type="text" x-model="newCategory" placeholder="New category name"
+               class="input-field flex-1" @keyup.enter="addCustomCategory()">
+        <button @click="addCustomCategory()" class="bg-indigo-600 text-white px-4 rounded-xl font-bold">Add</button>
+      </div>
+      <div class="space-y-2 max-h-64 overflow-y-auto">
+        <template x-for="cat in categories" :key="cat">
+          <div class="flex justify-between items-center p-2 border-b dark:border-slate-700">
+            <span x-text="cat"></span>
+            <button x-show="customCategories.includes(cat)" @click="removeCustomCategory(cat)" class="text-rose-500 text-xs font-bold">Remove</button>
+          </div>
+        </template>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button @click="showCategoryModal = false" class="btn-primary">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EXPORT MODAL ============ -->
+<div x-show="showExportModal" class="modal-backdrop" x-cloak
+     role="dialog" aria-modal="true" aria-label="Export data"
+     @keydown.escape.window="showExportModal = false"
+     x-trap.inert.noscroll="showExportModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 class="text-xl font-bold">📤 Export Data</h3>
+      <button @click="showExportModal = false" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body space-y-3">
+      <div>
+        <label class="text-sm font-bold">Date Range</label>
+        <div class="flex gap-2 mt-1">
+          <input type="date" x-model="exportDateFrom" class="input-field">
+          <input type="date" x-model="exportDateTo" class="input-field">
+        </div>
+      </div>
+      <div>
+        <label class="text-sm font-bold">Format</label>
+        <select x-model="exportFormat" class="input-field">
+          <option value="csv">CSV</option>
+          <option value="excel">Excel</option>
+          <option value="json">JSON</option>
+          <option value="pdf">PDF</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button @click="exportWithFilters()" class="btn-primary">Export</button>
+      <button @click="showExportModal = false" class="btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ OPENING BALANCES MODAL ============ -->
+<div x-show="showOpeningBalanceModal" class="modal-backdrop" x-cloak
+     role="dialog" aria-modal="true" aria-label="Opening balances"
+     @keydown.escape.window="showOpeningBalanceModal = false"
+     x-trap.inert.noscroll="showOpeningBalanceModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 class="text-xl font-bold">🏦 Opening Balances</h3>
+      <button @click="showOpeningBalanceModal = false" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body space-y-4">
+      <div><label class="text-sm font-bold">🏧 Bank (₹)</label><input type="number" x-model.number="openingBalances.bank" class="input-field"></div>
+      <div><label class="text-sm font-bold">💵 Cash (₹)</label><input type="number" x-model.number="openingBalances.cash" class="input-field"></div>
+      <div><label class="text-sm font-bold">📈 Investment (₹)</label><input type="number" x-model.number="openingBalances.investment" class="input-field"></div>
+    </div>
+    <div class="modal-footer">
+      <button @click="saveOpeningBalances()" class="btn-primary">Save</button>
+      <button @click="showOpeningBalanceModal = false" class="btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ RECURRING MODAL ============ -->
+<div x-show="showRecurringModal" class="modal-backdrop" x-cloak
+     role="dialog" aria-modal="true" aria-label="Recurring transaction"
+     @keydown.escape.window="showRecurringModal = false"
+     x-trap.inert.noscroll="showRecurringModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 class="text-xl font-bold">🔄 Recurring Transaction</h3>
+      <button @click="showRecurringModal = false" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body space-y-3">
+      <div>
+        <label class="text-sm font-bold">Type</label>
+        <select x-model="recurringForm.type" class="input-field">
+          <option value="income">💰 Income</option>
+          <option value="expense">💸 Expense</option>
+          <option value="lent">🤝 Lend</option>
+          <option value="borrowed">📋 Borrow</option>
+          <option value="investment">📈 Investment</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-sm font-bold">Method</label>
+        <select x-model="recurringForm.method" class="input-field">
+          <option value="bank">🏦 Bank</option>
+          <option value="cash">💵 Cash</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-sm font-bold">Frequency</label>
+        <select x-model="recurringForm.frequency" class="input-field">
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </div>
+      <div><label class="text-sm font-bold">Next Due Date</label><input type="date" x-model="recurringForm.nextDueDate" class="input-field"></div>
+      <div><label class="text-sm font-bold">End Date (Optional)</label><input type="date" x-model="recurringForm.endDate" class="input-field"></div>
+      <div><label class="text-sm font-bold">Amount (₹)</label><input type="number" x-model.number="recurringForm.amt" class="input-field"></div>
+      <div><label class="text-sm font-bold">Description</label><input type="text" x-model="recurringForm.desc" placeholder="Description" class="input-field"></div>
+      <div><label class="text-sm font-bold">Category</label><input type="text" x-model="recurringForm.category" placeholder="Other" class="input-field"></div>
+    </div>
+    <div class="modal-footer">
+      <button @click="addRecurringTransaction()" class="btn-primary" x-text="recurringForm.id ? 'Update' : 'Save'"></button>
+      <button @click="showRecurringModal = false" class="btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SETTLE MODAL ============ -->
+<div x-show="showSettleModal" class="modal-backdrop" x-cloak
+     role="dialog" aria-modal="true" aria-label="Settle transaction"
+     @keydown.escape.window="closeSettleForm()"
+     x-trap.inert.noscroll="showSettleModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 class="text-xl font-bold">🤝 Settle Transaction</h3>
+      <button @click="closeSettleForm()" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body space-y-3">
+      <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
+        <div class="text-xs text-slate-500">Original</div>
+        <div class="font-bold text-sm" x-text="settleForm.originalDesc"></div>
+        <div class="flex justify-between mt-1 text-xs">
+          <span>Total: <b x-text="formatCurrency(settleForm.originalAmount)"></b></span>
+          <span>Remaining: <b class="text-amber-600" x-text="formatCurrency(settleForm.remainingAmount)"></b></span>
+        </div>
+      </div>
+      <div><label class="text-sm font-bold">Settlement Amount (₹)</label>
+        <input type="number" x-model.number="settleForm.amount" class="input-field" max="9999999" step="0.01">
+      </div>
+      <div><label class="text-sm font-bold">Date</label><input type="date" x-model="settleForm.date" class="input-field"></div>
+      <div><label class="text-sm font-bold">Method</label>
+        <select x-model="settleForm.method" class="input-field">
+          <option value="bank">🏦 Bank</option>
+          <option value="cash">💵 Cash</option>
+        </select>
+      </div>
+      <div><label class="text-sm font-bold">Notes (Optional)</label><input type="text" x-model="settleForm.notes" class="input-field" placeholder="Reference..."></div>
+    </div>
+    <div class="modal-footer">
+      <button @click="processSettleForm()" class="btn-primary">Settle</button>
+      <button @click="closeSettleForm()" class="btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ RESET DATA MODAL ============ -->
+<div x-show="showResetDataModal" class="modal-backdrop" x-cloak
+     role="dialog" aria-modal="true" aria-label="Reset all data"
+     @keydown.escape.window="showResetDataModal=false"
+     x-trap.inert.noscroll="showResetDataModal">
+  <div class="modal-panel max-w-sm">
+    <div class="modal-header">
+      <h3 class="text-xl font-bold text-rose-600">🗑️ Reset All Data</h3>
+      <button @click="showResetDataModal=false" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body space-y-3">
+      <p class="text-sm text-slate-600 dark:text-slate-300">
+        This will permanently delete all transactions, balances, recurring items and categories for <b x-text="user?.username"></b>.
+      </p>
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" x-model="resetConfirm"> I understand this cannot be undone
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button @click="showResetDataModal=false" class="btn-secondary">Cancel</button>
+      <button @click="resetAllData()" :disabled="!resetConfirm" class="btn-danger"
+              :aria-disabled="!resetConfirm"
+              :class="!resetConfirm ? 'opacity-50 cursor-not-allowed' : ''">Reset Everything</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SHORTCUTS MODAL ============ -->
+<div x-show="showShortcuts" class="modal-backdrop" x-cloak
+     role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"
+     @keydown.escape.window="showShortcuts=false"
+     x-trap.inert.noscroll="showShortcuts">
+  <div class="modal-panel max-w-sm">
+    <div class="modal-header">
+      <h3 class="text-xl font-bold">⌨️ Keyboard Shortcuts</h3>
+      <button @click="showShortcuts=false" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body space-y-2 text-sm">
+      <div class="flex justify-between"><span>Dashboard</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">1</kbd></div>
+      <div class="flex justify-between"><span>Ledger</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">2</kbd></div>
+      <div class="flex justify-between"><span>Transactions</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">3</kbd></div>
+      <div class="flex justify-between"><span>Reports</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">4</kbd></div>
+      <div class="flex justify-between"><span>Recurring</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">5</kbd></div>
+      <div class="flex justify-between"><span>Insights</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">6</kbd></div>
+      <div class="flex justify-between"><span>Focus search</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">/</kbd></div>
+      <div class="flex justify-between"><span>Close modal</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">Esc</kbd></div>
+    </div>
+    <div class="modal-footer">
+      <button @click="showShortcuts=false" class="btn-primary">Got it</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ AUTH SECTION ============ -->
+<div x-show="!isLoggedIn" class="w-full max-w-md mx-auto" x-cloak>
+  <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6">
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-3">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 9 9 0 0118 0z"></path>
+        </svg>
+      </div>
+      <h2 class="text-2xl font-black text-slate-800 dark:text-white" x-text="authMode === 'login' ? 'Welcome Back' : 'Create Account'"></h2>
+      <div class="mt-2 inline-block bg-gradient-to-r from-amber-100 to-amber-200 dark:from-amber-900/30 dark:to-amber-800/30 px-3 py-1 rounded-full text-xs font-mono">🎯 Demo: admin / 123</div>
+      <div x-show="storageNotice" x-cloak class="mt-3 bg-amber-100 dark:bg-amber-900/40 border-l-4 border-amber-500 p-2 rounded-lg text-xs text-left">
+        ⚠️ <b>Sandbox mode:</b> Storage unavailable. Data lives in memory only.
+      </div>
+    </div>
+    <div class="space-y-4">
+      <template x-if="authMode === 'login'">
+        <div class="space-y-4">
+          <input type="text" x-model="authForm.username" placeholder="Username" class="input-field" @keyup.enter="handleAuth()" autocomplete="username">
+          <input type="password" x-model="authForm.password" placeholder="Password" class="input-field" @keyup.enter="handleAuth()" autocomplete="current-password">
+          <div class="flex justify-between text-sm">
+            <label class="flex items-center gap-2"><input type="checkbox" x-model="rememberMe"> Remember me</label>
+          </div>
+        </div>
+      </template>
+      <template x-if="authMode === 'register'">
+        <div class="space-y-3">
+          <input type="text" x-model="registerForm.name" placeholder="Full Name" class="input-field">
+          <input type="tel" x-model="registerForm.mobile" placeholder="Mobile" class="input-field">
+          <input type="email" x-model="registerForm.email" placeholder="Email" class="input-field">
+          <input type="text" x-model="registerForm.username" placeholder="Username" class="input-field">
+          <input type="password" x-model="registerForm.password" placeholder="Password (min 4)" class="input-field">
+        </div>
+      </template>
+      <button @click="handleAuth()" class="w-full bg-indigo-600 text-white p-4 rounded-xl font-extrabold hover:bg-indigo-700 transition touch-target"
+              x-text="authMode === 'login' ? 'Login →' : 'Register →'"></button>
+      <p class="text-center text-sm">
+        <button @click="toggleAuthMode()" class="text-indigo-600 font-bold hover:underline touch-target"
+                x-text="authMode === 'login' ? 'Register Now' : 'Login Now'"></button>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div x-show="isLoggedIn" class="w-full max-w-6xl mx-auto space-y-4 pb-6" x-cloak>
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg overflow-hidden">
+    <!-- Header -->
+    <div class="p-4 flex justify-between items-center border-b dark:border-slate-700 flex-wrap gap-2">
+      <div>
+        <h1 class="text-2xl font-black bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent">Smart Personal Finance Manager</h1>
+        <p class="text-xs">Hi, <span class="font-bold text-indigo-500" x-text="user?.username"></span><span class="demo-badge" x-show="user?.username === 'admin'">Admin</span></p>
+      </div>
+      <div class="flex gap-2 items-center flex-wrap">
+        <button id="pwaInstallButton" hidden class="bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold">⬇ Install App</button>
+        <div x-show="isSyncing" class="spinner w-4 h-4" role="status" aria-label="Syncing"></div>
+        <button @click="toggleDarkMode" class="bg-slate-100 dark:bg-slate-700 p-2 rounded-full w-10 h-10" :title="darkMode ? 'Light mode' : 'Dark mode'" :aria-label="darkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+          <span x-text="darkMode ? '☀️' : '🌙'"></span>
+        </button>
+        <button @click="showShortcuts = true" class="bg-slate-100 dark:bg-slate-700 p-2 rounded-full w-10 h-10" aria-label="Keyboard shortcuts">⌨️</button>
+        <button @click="showOpeningBalanceModal = true" class="bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 px-3 py-2 rounded-xl text-xs font-bold">🏁 Opening</button>
+        <div class="relative">
+          <button @click="toggleDropdown()" class="bg-slate-100 dark:bg-slate-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2" aria-haspopup="true" :aria-expanded="dropdownOpen">
+            ⋯ Actions
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </button>
+          <div x-show="dropdownOpen" @click.away="dropdownOpen = false" @keydown.escape.window="dropdownOpen = false" class="dropdown-menu" role="menu">
+            <div class="dropdown-item" @click="exportData(); dropdownOpen=false" role="menuitem">💾 Backup (JSON)</div>
+            <div class="dropdown-item" @click="triggerImport(); dropdownOpen=false" role="menuitem">📂 Import JSON</div>
+            <label class="dropdown-item cursor-pointer" role="menuitem">📎 Import Excel<input type="file" class="hidden" accept=".xlsx,.xls,.csv" @change="importFromExcel"></label>
+            <div class="dropdown-item" @click="syncToCloud(); dropdownOpen=false" role="menuitem">☁️ Sync to Cloud</div>
+            <div class="dropdown-item" @click="showResetDataModal=true; dropdownOpen=false" role="menuitem">🗑️ Reset All Data</div>
+            <div class="border-t my-1 dark:border-slate-600"></div>
+            <div class="dropdown-item text-rose-600" @click="logout(); dropdownOpen=false" role="menuitem">🚪 Logout</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sandbox warning banner -->
+    <div x-show="storageNotice" x-cloak class="bg-amber-100 dark:bg-amber-900/40 border-l-4 border-amber-500 p-3 text-sm flex items-center gap-2" role="alert">
+      <span>⚠️</span>
+      <span><b>Sandbox mode:</b> Local storage is unavailable. Your data will be lost when you close this tab. Open this file directly in a browser to persist.</span>
+    </div>
+
+    <!-- ✅ QW5: Desktop Tabs generated from TABS config -->
+    <div class="desktop-tabs flex border-b dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 overflow-x-auto" role="tablist">
+      <template x-for="tab in TABS" :key="tab.id">
+        <button @click="activeTab = tab.id" role="tab" :aria-selected="activeTab === tab.id"
+                :class="activeTab === tab.id ? 'border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-800' : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'"
+                class="px-5 py-3 text-sm font-bold uppercase border-b-2 transition whitespace-nowrap">
+          <span x-text="tab.icon + ' ' + tab.label"></span>
+        </button>
+      </template>
+    </div>
+
+    <!-- ✅ QW5: Mobile Bottom Nav generated from TABS config -->
+    <div class="mobile-bottom-nav" role="tablist">
+      <template x-for="tab in TABS" :key="'m-' + tab.id">
+        <button @click="activeTab=tab.id" role="tab" :aria-selected="activeTab === tab.id"
+                :class="activeTab===tab.id ? 'nav-item-active' : ''" class="nav-item">
+          <span x-text="tab.icon" aria-hidden="true"></span><span x-text="tab.mobileLabel"></span>
+        </button>
+      </template>
+    </div>
+
+    <!-- ============ DASHBOARD ============ -->
+    <div x-show="activeTab === 'dashboard'" class="p-4 space-y-5" x-cloak>
+      <div class="bg-gradient-to-r from-cyan-600 to-blue-700 text-white p-4 rounded-2xl">
+        <div class="flex justify-between flex-wrap gap-2">
+          <div>
+            <p class="text-[10px] uppercase opacity-80">Opening Balances</p>
+            <div class="flex gap-4 mt-1 text-sm flex-wrap">
+              <span>🏦 Bank: <b x-text="formatCurrency(openingBalances.bank)"></b></span>
+              <span>💵 Cash: <b x-text="formatCurrency(openingBalances.cash)"></b></span>
+              <span>📈 Investment: <b x-text="formatCurrency(openingBalances.investment)"></b></span>
+            </div>
+          </div>
+          <button @click="showOpeningBalanceModal = true" class="text-[10px] bg-white/20 px-3 py-1 rounded-full self-start">Edit</button>
+        </div>
+      </div>
+
+      <div x-show="budgetAlert.show" class="bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-500 p-3 rounded-xl" role="alert">
+        <div class="flex items-center gap-2">
+          <span>⚠️</span>
+          <span class="text-sm" x-text="budgetAlert.message"></span>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="col-span-2 bg-gradient-to-r from-indigo-900 to-slate-900 text-white p-5 rounded-2xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('networth')">
+          <small class="text-[11px] uppercase opacity-80">Total Net Worth</small>
+          <h2 class="text-2xl font-black" x-text="formatCurrency(totals.netWorth)"></h2>
+          <span class="text-[10px] opacity-70">Click for details →</span>
+        </div>
+        <div class="bg-blue-600 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('bank')">
+          <small class="text-[11px]">🏦 Bank Balance</small>
+          <h3 class="text-xl font-bold" x-text="formatCurrency(totals.bank)"></h3>
+          <span class="text-[9px] opacity-70">Tap for bank statement</span>
+        </div>
+        <div class="bg-emerald-600 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('cash')">
+          <small class="text-[11px]">💵 Cash Balance</small>
+          <h3 class="text-xl font-bold" x-text="formatCurrency(totals.cash)"></h3>
+          <span class="text-[9px] opacity-70">Tap for cash statement</span>
+        </div>
+        <div class="bg-amber-500 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('receivable')">
+          <small class="text-[11px]">💰 Receivable (Lent)</small>
+          <h3 class="text-xl font-bold" x-text="formatCurrency(totals.lent)"></h3>
+          <span class="text-[9px] opacity-70">Tap for pending lent</span>
+        </div>
+        <div class="bg-purple-600 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('payable')">
+          <small class="text-[11px]">📋 Payable (Borrowed)</small>
+          <h3 class="text-xl font-bold" x-text="formatCurrency(totals.debt)"></h3>
+          <span class="text-[9px] opacity-70">Tap for pending borrowed</span>
+        </div>
+        <div class="col-span-2 bg-cyan-600 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('investment')">
+          <small class="text-[11px]">📈 Investments</small>
+          <h3 class="text-xl font-bold" x-text="formatCurrency(totals.investment)"></h3>
+          <span class="text-[9px] opacity-70">Tap for investment history</span>
+        </div>
+      </div>
+
+      <!-- Quick Transaction Form -->
+      <div class="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-2xl">
+        <p class="text-xs font-bold mb-2" x-text="form.id ? '✏️ Edit Transaction' : '➕ Quick Transaction'"></p>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <select x-model="form.type" class="input-field">
+            <option value="income">💰 Income</option>
+            <option value="expense">💸 Expense</option>
+            <option value="lent">🤝 Lend</option>
+            <option value="borrowed">📋 Borrow</option>
+            <option value="investment">📈 Investment</option>
+          </select>
+          <select x-model="form.method" class="input-field">
+            <option value="bank">🏦 Bank</option>
+            <option value="cash">💵 Cash</option>
+          </select>
+        </div>
+        <input type="date" x-model="form.date" class="input-field mb-2">
+        <input type="text" x-model="form.desc" placeholder="Description" class="input-field mb-2">
+        <input type="number" x-model.number="form.amt" placeholder="Amount ₹" class="input-field mb-2" step="0.01">
+        <div class="relative mb-2">
+          <input type="text" x-model="form.category" @focus="showCategorySuggestions = true; filterCategories()" @input="filterCategories()"
+                 placeholder="Category" class="input-field">
+          <div x-show="showCategorySuggestions && filteredCategories.length" class="category-suggestions" @click.away="showCategorySuggestions = false">
+            <template x-for="cat in filteredCategories" :key="cat">
+              <div @click="form.category = cat; showCategorySuggestions = false" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer text-sm" x-text="cat"></div>
+            </template>
+          </div>
+        </div>
+        <div class="mb-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl" x-show="!form.id">
+          <label class="flex items-center gap-3">
+            <input type="checkbox" x-model="form.makeRecurring" class="w-5 h-5">
+            <div class="flex-1">
+              <span class="font-bold text-sm">🔄 Make Recurring</span>
+              <p class="text-[10px] text-slate-500 dark:text-slate-400">Repeat automatically</p>
+            </div>
+          </label>
+          <div x-show="form.makeRecurring" class="mt-3 space-y-2 pl-2 border-l-2 border-indigo-300 dark:border-indigo-700">
+            <div>
+              <label class="text-xs font-bold">Frequency</label>
+              <select x-model="form.recurringFrequency" class="input-field mt-1">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-bold">Next Due Date</label>
+              <input type="date" x-model="form.recurringNextDate" class="input-field mt-1">
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button @click="addTx()" class="flex-1 bg-indigo-600 text-white p-3 rounded-xl font-bold hover:bg-indigo-700">
+            <span x-text="form.id ? '✓ Update Transaction' : '✓ Add Transaction'"></span>
+          </button>
+          <button x-show="form.id" @click="resetForm()" class="bg-slate-300 dark:bg-slate-600 p-3 rounded-xl font-bold" aria-label="Cancel edit">✕</button>
+          <button @click="showCategoryModal = true" class="bg-slate-200 dark:bg-slate-600 p-3 rounded-xl font-bold" aria-label="Manage categories">🏷️</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ LEDGER ============ -->
+    <div x-show="activeTab === 'ledger'" class="p-4" x-cloak>
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm">
+        <div class="p-3 flex gap-2 flex-wrap">
+          <input type="text" id="ledgerSearchInput" x-model="ledgerSearch" @input="debouncedLedgerSearch()" placeholder="Search..." class="input-field flex-1">
+          <select x-model="ledgerTypeFilter" @change="refreshLedger()" class="input-field w-auto">
+            <option value="all">All</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+            <option value="lent">Lent</option>
+            <option value="borrowed">Borrowed</option>
+            <option value="settlement">Settlement</option>
+            <option value="investment">Investment</option>
+          </select>
+          <select x-model="ledgerSort" @change="refreshLedger()" class="input-field w-auto">
+            <option value="date-desc">Date ↓</option>
+            <option value="date-asc">Date ↑</option>
+            <option value="amount-desc">Amount ↓</option>
+            <option value="amount-asc">Amount ↑</option>
+          </select>
+        </div>
+        <div class="ledger-table-container">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 dark:bg-slate-700 text-xs">
+              <tr>
+                <th class="p-2 text-left">Date</th>
+                <th class="p-2 text-left">Desc</th>
+                <th class="p-2 text-left">Type</th>
+                <th class="p-2 text-right">Amount</th>
+                <th class="p-2 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="t in paginatedLedger" :key="t.id">
+                <tr class="border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/40">
+                  <td class="p-2 text-xs whitespace-nowrap" x-text="formatDisplayDate(t.date)"></td>
+                  <td class="p-2 font-medium text-sm">
+                    <span x-text="(t.desc || '').slice(0,24)"></span>
+                    <span x-show="t.recurringParentId" class="recurring-badge">🔄</span>
+                  </td>
+                  <td class="p-2">
+                    <span :class="'type-badge type-'+t.type" x-text="t.type"></span>
+                    <span x-show="(t.type === 'lent' || t.type === 'borrowed') && !t.settled && (t.remainingAmount || t.amt) > 0" class="ml-1 text-amber-600 text-[9px] font-bold">
+                      ₹<span x-text="t.remainingAmount || t.amt"></span> left
+                    </span>
+                  </td>
+                  <td class="p-2 text-right font-bold whitespace-nowrap"
+                      :class="{'text-emerald-600':t.type==='income' || (t.type==='settlement' && t.settlementFor==='lent'),'text-rose-600':t.type==='expense' || (t.type==='settlement' && t.settlementFor==='borrowed')}"
+                      x-text="formatCurrency(t.amt, 2)"></td>
+                  <td class="p-2">
+                    <div class="action-btn-group">
+                      <button @click="editTxFromLedger(t)" class="action-btn-edit action-btn" title="Edit" aria-label="Edit">✏️</button>
+                      <button x-show="(t.type === 'lent' || t.type === 'borrowed') && !t.settled && (t.remainingAmount || t.amt) > 0"
+                              @click="openSettleForm(t)" class="action-btn-settle action-btn" title="Settle" aria-label="Settle">🤝</button>
+                      <button @click="safeDeleteTx(t.id)" class="action-btn-delete action-btn" title="Delete" aria-label="Delete">🗑️</button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="filteredLedger.length === 0">
+                <td colspan="5" class="empty-state">
+                  <div class="empty-state-icon">📒</div>
+                  No transactions match your filters
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-3 flex justify-between items-center" x-show="filteredLedger.length > 0">
+          <button @click="ledgerCurrentPage = Math.max(1, ledgerCurrentPage-1)" :disabled="ledgerCurrentPage===1"
+                  class="px-3 py-1 border rounded-lg dark:border-slate-600 disabled:opacity-40">Prev</button>
+          <span class="text-xs" x-text="'Page ' + ledgerCurrentPage + ' of ' + ledgerTotalPages()"></span>
+          <button @click="ledgerCurrentPage = Math.min(ledgerTotalPages(), ledgerCurrentPage+1)" :disabled="ledgerCurrentPage >= ledgerTotalPages()"
+                  class="px-3 py-1 border rounded-lg dark:border-slate-600 disabled:opacity-40">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TRANSACTIONS ============ -->
+    <div x-show="activeTab === 'transactions'" class="p-4" x-cloak>
+      <div class="flex gap-2 mb-3 flex-wrap">
+        <select x-model="transactionTypeFilter" @change="refreshFilteredTxs()" class="input-field w-auto">
+          <option value="all">All</option>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+          <option value="lent">Lent</option>
+          <option value="borrowed">Borrowed</option>
+          <option value="settlement">Settlement</option>
+          <option value="investment">Investment</option>
+        </select>
+        <input type="text" id="txSearchInput" x-model="search" @input="handleSearchDebounced()" placeholder="Search..." class="input-field flex-1">
+      </div>
+      <div class="space-y-2 max-h-[520px] overflow-auto transactions-scroll">
+        <template x-for="t in paginatedTxs()" :key="t.id">
+          <div class="bg-white dark:bg-slate-700 p-3 rounded-xl shadow">
+            <div class="flex justify-between gap-2">
+              <div class="min-w-0 flex-1">
+                <div class="font-bold text-sm truncate" x-text="t.desc"></div>
+                <div class="text-xs text-slate-500" x-text="formatDisplayDate(t.date)+' • '+t.method + (t.category ? ' • ' + t.category : '')"></div>
+              </div>
+              <div class="font-bold whitespace-nowrap"
+                   :class="{'text-emerald-600':t.type==='income' || (t.type==='settlement' && t.settlementFor==='lent'),'text-rose-600':t.type==='expense' || (t.type==='settlement' && t.settlementFor==='borrowed')}"
+                   x-text="formatCurrency(t.amt, 2)"></div>
+            </div>
+            <div class="flex justify-between items-center mt-2">
+              <span :class="'type-badge type-'+t.type" x-text="t.type"></span>
+              <div class="flex gap-3 text-xs font-bold">
+                <button @click="editTx(t)" class="text-blue-600">Edit</button>
+                <button x-show="(t.type==='lent'||t.type==='borrowed')&&!t.settled && (t.remainingAmount || t.amt) > 0" @click="openSettleForm(t)" class="text-purple-600">Settle</button>
+                <button @click="safeDeleteTx(t.id)" class="text-rose-500">Delete</button>
+              </div>
+            </div>
+          </div>
+        </template>
+        <div x-show="filteredTxs.length === 0" class="empty-state">
+          <div class="empty-state-icon">📋</div>
+          No transactions yet
+          <div class="text-xs mt-2">Add one from the Dashboard →</div>
+        </div>
+      </div>
+      <div class="mt-3 flex justify-center gap-2" x-show="filteredTxs.length > 0">
+        <button @click="currentPage = Math.max(1, currentPage-1)" :disabled="currentPage===1" class="px-3 py-1 border rounded-lg dark:border-slate-600 disabled:opacity-40">Prev</button>
+        <span class="self-center text-xs" x-text="currentPage+'/'+totalPages()"></span>
+        <button @click="currentPage = Math.min(totalPages(), currentPage+1)" :disabled="currentPage >= totalPages()" class="px-3 py-1 border rounded-lg dark:border-slate-600 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+
+    <!-- ============ REPORTS ============ -->
+    <div x-show="activeTab === 'reports'" class="p-4" x-cloak>
+      <div class="mb-3 flex gap-2 flex-wrap">
+        <button @click="reportRange='month'" :class="reportRange==='month'?'bg-indigo-600 text-white':'bg-white dark:bg-slate-700 border dark:border-slate-600'" class="px-3 py-1 rounded-lg text-sm font-bold">Month</button>
+        <button @click="reportRange='year'" :class="reportRange==='year'?'bg-indigo-600 text-white':'bg-white dark:bg-slate-700 border dark:border-slate-600'" class="px-3 py-1 rounded-lg text-sm font-bold">Year</button>
+        <button @click="showExportModal = true" class="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-lg text-sm ml-auto font-bold">📤 Export</button>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-3">
+        <canvas id="trendChart" class="w-full" style="height:220px"></canvas>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <div class="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-xl">
+          <p class="text-xs text-slate-600 dark:text-slate-300">Income</p>
+          <p class="font-bold text-emerald-600 dark:text-emerald-400" x-text="formatCurrency(reportStats.totalIncome)"></p>
+        </div>
+        <div class="bg-rose-50 dark:bg-rose-900/30 p-3 rounded-xl">
+          <p class="text-xs text-slate-600 dark:text-slate-300">Expense</p>
+          <p class="font-bold text-rose-600 dark:text-rose-400" x-text="formatCurrency(reportStats.totalExpense)"></p>
+        </div>
+        <div class="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-xl col-span-2">
+          <p class="text-xs text-slate-600 dark:text-slate-300">Net Savings</p>
+          <p class="font-bold text-indigo-600 dark:text-indigo-300" x-text="formatCurrency(reportStats.totalIncome - reportStats.totalExpense)"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ RECURRING ============ -->
+    <div x-show="activeTab === 'recurring'" class="p-4" x-cloak>
+      <button @click="openRecurringModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm mb-3 font-bold">+ Add Recurring</button>
+      <div class="space-y-2">
+        <template x-for="rt in recurringTransactions" :key="rt.id">
+          <div class="bg-white dark:bg-slate-700 p-3 rounded-xl flex justify-between items-center gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="font-bold text-sm truncate" x-text="rt.desc"></div>
+              <div class="text-xs text-slate-500"
+                   x-text="formatCurrency(rt.amt) + ' • ' + rt.type + ' • ' + rt.frequency + ' • Next: ' + formatDisplayDate(rt.nextDueDate) + (rt.active === false ? ' • ⏸ Inactive' : '')"></div>
+            </div>
+            <div class="flex gap-2">
+              <button @click="openRecurringModal(rt)" class="text-blue-600 text-sm font-bold">Edit</button>
+              <button @click="deleteRecurring(rt.id)" class="text-rose-500 text-sm font-bold">Delete</button>
+            </div>
+          </div>
+        </template>
+        <div x-show="recurringTransactions.length === 0" class="empty-state">
+          <div class="empty-state-icon">🔄</div>
+          No recurring transactions yet
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ INSIGHTS ============ -->
+    <div x-show="activeTab === 'insights'" class="p-4" x-cloak>
+      <div class="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-2xl p-5">
+        <h3 class="font-bold mb-3">Top Spending Categories</h3>
+        <template x-for="cat in topSpendingCategories" :key="cat.category">
+          <div class="mb-2">
+            <div class="flex justify-between text-sm">
+              <span x-text="cat.category"></span>
+              <span x-text="formatCurrency(cat.amount)"></span>
+            </div>
+            <div class="bg-gray-200 dark:bg-slate-600 rounded-full h-2 overflow-hidden mt-1">
+              <div class="bg-rose-500 h-2 rounded-full transition-all duration-500"
+                   :style="{width: (cat.amount / (topSpendingCategories[0]?.amount || 1) * 100) + '%'}"></div>
+            </div>
+          </div>
+        </template>
+        <div x-show="topSpendingCategories.length === 0" class="text-center text-slate-400 py-6 text-sm">No expenses recorded yet</div>
+        <div class="mt-4">
+          <p class="font-bold">Savings Rate: <span x-text="savingsRate+'%'"></span></p>
+          <div class="bg-gray-200 dark:bg-slate-600 rounded-full h-2 mt-1 overflow-hidden">
+            <div class="bg-emerald-500 h-2 rounded-full transition-all duration-500" :style="{width: Math.max(0, Math.min(100, savingsRate)) + '%'}"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden file input for JSON import (inside Alpine scope) -->
+<input type="file" id="fileInput" class="hidden" accept=".json" @change="importData">
+
+<script>
+// ✅ QW6: Central configuration object
+const CONFIG = {
+  IDLE_LOCK_MS: 30 * 60 * 1000,
+  RECURRING_GUARD_MAX: 500,
+  AMOUNT_EPSILON: 0.001,
+  AMOUNT_MAX: 9999999,
+  PAGE_SIZE: 15,
+  SAVE_DEBOUNCE_MS: 400,
+  SEARCH_DEBOUNCE_MS: 300,
+  CHART_REFRESH_DEBOUNCE_MS: 300,
+  TOAST_DURATION: { success: 2500, info: 3000, warning: 4000, error: 5000, default: 3000 },
+  UNDO_DURATION_MS: 5000,
+  LOCALE: 'en-IN',
+  CURRENCY: 'INR'
+};
+
+// ✅ QW5: Single source of truth for tabs
+const TABS = [
+  { id: 'dashboard',    icon: '📊', label: 'Dashboard',    mobileLabel: 'Home' },
+  { id: 'ledger',       icon: '📒', label: 'Ledger',       mobileLabel: 'Ledger' },
+  { id: 'transactions', icon: '📋', label: 'Transactions', mobileLabel: 'Txns' },
+  { id: 'reports',      icon: '📈', label: 'Reports',      mobileLabel: 'Reports' },
+  { id: 'recurring',    icon: '🔄', label: 'Recurring',    mobileLabel: 'Repeat' },
+  { id: 'insights',     icon: '💡', label: 'Insights',     mobileLabel: 'Insights' }
+];
+
+function budgetApp() {
+  return {
+    // ✅ QW5: expose TABS to template
+    TABS,
+
+    // ===== Auth state =====
+    isLoggedIn: false,
+    authMode: 'login',
+    user: null,
+    authForm: { username: '', password: '' },
+    registerForm: { name: '', mobile: '', email: '', username: '', password: '' },
+    rememberMe: false,
+
+    // ===== UI state =====
+    darkMode: false,
+    isLoading: false,
+    isSyncing: false,
+    loadingMessage: '',
+    showLockScreen: false,
+    lockPassword: '',
+    dropdownOpen: false,
+    showShortcuts: false,
+    showCategoryModal: false,
+    newCategory: '',
+    showRecurringModal: false,
+    showExportModal: false,
+    showOpeningBalanceModal: false,
+    showResetDataModal: false,
+    resetConfirm: false,
+    showDetailModal: false,
+    detailModalTitle: '',
+    detailModalTotal: 0,
+    detailModalTransactions: [],
+    showSettleModal: false,
+    showCategorySuggestions: false,
+    activeTab: 'dashboard',
+    storageNotice: false,
+
+    // ===== Storage shims =====
+    _storage: null,
+    _sessionStorage: null,
+
+    // ===== Confirm modal =====
+    confirmModal: { show: false, title: '', message: '', requireText: '', inputValue: '', _resolve: null },
+
+    // ===== Toast =====
+    toast: { show: false, message: '', type: 'success', icon: '' },
+    undoToast: { show: false, message: '', _deleted: null, _timer: null },
+
+    // ===== Data =====
+    openingBalances: { bank: 0, cash: 0, investment: 0 },
+    txs: [],
+    recurringTransactions: [],
+    customCategories: [],
+    categories: ['Food','Travel','Shopping','Utilities','Housing','Entertainment','Health','Education','Transport','Insurance','Stocks','Mutual Funds','Real Estate','Other'],
+    filteredCategories: [],
+    budgetLimits: { monthly: 50000 },
+
+    // ===== Filters / paging =====
+    search: '',
+    transactionTypeFilter: 'all',
+    ledgerSearch: '',
+    ledgerTypeFilter: 'all',
+    ledgerSort: 'date-desc',
+    ledgerCurrentPage: 1,
+    ledgerPageSize: CONFIG.PAGE_SIZE,
+    currentPage: 1,
+    pageSize: CONFIG.PAGE_SIZE,
+    reportRange: 'month',
+
+    // ===== Form =====
+    form: {
+      id: null, type: 'expense', method: 'bank',
+      date: new Date().toISOString().split('T')[0],
+      desc: '', amt: '', category: '',
+      makeRecurring: false,
+      recurringFrequency: 'monthly',
+      recurringNextDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
+      recurringEndDate: '', recurringParentId: null
+    },
+
+    // ===== Recurring form =====
+    recurringForm: {
+      id: null, type: 'expense', method: 'bank',
+      frequency: 'monthly',
+      nextDueDate: new Date().toISOString().split('T')[0],
+      endDate: '', active: true, amt: 1000, desc: 'Recurring Payment', category: 'Other'
+    },
+
+    // ===== Settle form =====
+    settleForm: {
+      transactionId: null, originalDesc: '', originalAmount: 0, remainingAmount: 0,
+      amount: 0, date: new Date().toISOString().split('T')[0], method: 'bank', notes: ''
+    },
+
+    // ===== Export =====
+    exportDateFrom: '', exportDateTo: '', exportFormat: 'csv',
+
+    // ===== Caches =====
+    _txsCache: [],
+    _ledgerCache: [],
+    _totalsCache: null,
+    _totalsKey: '',
+    // ✅ QW2: revision counter for cache invalidation
+    _revision: 0,
+    ledgerSearchDebounceTimer: null,
+    searchDebounceTimer: null,
+    _chartInstance: null,
+    _idleTimer: null,
+    _idleHandlers: null,
+    _keydownHandler: null,
+    _debouncedRefreshChart: null,
+    _debouncedSave: null,
+
+    // ============================================================
+    // SAFE STORAGE
+    // ============================================================
+    getStorage() {
+      if (this._storage) return this._storage;
+      try {
+        const t = '__budget_test__';
+        window.localStorage.setItem(t, '1');
+        window.localStorage.removeItem(t);
+        this._storage = window.localStorage;
+      } catch (e) {
+        console.warn('localStorage unavailable, using in-memory store:', e.message);
+        const mem = new Map();
+        this._storage = {
+          getItem: k => mem.has(k) ? mem.get(k) : null,
+          setItem: (k, v) => mem.set(k, String(v)),
+          removeItem: k => mem.delete(k),
+          clear: () => mem.clear(),
+          _isMemory: true
+        };
+        this.storageNotice = true;
+      }
+      return this._storage;
+    },
+
+    getSessionStorage() {
+      if (this._sessionStorage) return this._sessionStorage;
+      try {
+        const t = '__budget_test__';
+        window.sessionStorage.setItem(t, '1');
+        window.sessionStorage.removeItem(t);
+        this._sessionStorage = window.sessionStorage;
+      } catch (e) {
+        this._sessionStorage = this.getStorage();
+      }
+      return this._sessionStorage;
+    },
+
+    lsGet(key) { try { return this.getStorage().getItem(key); } catch { return null; } },
+    lsSet(key, val) { try { this.getStorage().setItem(key, val); return true; } catch (e) { console.warn('lsSet failed:', e); return false; } },
+    lsRemove(key) { try { this.getStorage().removeItem(key); } catch {} },
+    ssGet(key) { try { return this.getSessionStorage().getItem(key); } catch { return null; } },
+    ssSet(key, val) { try { this.getSessionStorage().setItem(key, val); return true; } catch (e) { console.warn('ssSet failed:', e); return false; } },
+    ssRemove(key) { try { this.getSessionStorage().removeItem(key); } catch {} },
+
+    // ============================================================
+    // ✅ QW2: TOTALS — revision-based memoization
+    // ============================================================
+    get totals() {
+      const key = this._revision + '|' + this.txs.length + '|' +
+                  this.openingBalances.bank + '|' + this.openingBalances.cash + '|' + this.openingBalances.investment;
+      if (this._totalsKey === key && this._totalsCache) return this._totalsCache;
+
+      let b = +this.openingBalances.bank || 0;
+      let c = +this.openingBalances.cash || 0;
+      let inv = +this.openingBalances.investment || 0;
+      let lent = 0, debt = 0;
+
+      for (const t of this.txs) {
+        const amt = +t.amt || 0;
+        if (t.type === 'income') { t.method === 'bank' ? b += amt : c += amt; }
+        else if (t.type === 'expense') { t.method === 'bank' ? b -= amt : c -= amt; }
+        else if (t.type === 'lent') {
+          const rem = t.settled ? 0 : (t.remainingAmount !== undefined ? t.remainingAmount : amt);
+          if (rem > 0) { t.method === 'bank' ? b -= rem : c -= rem; lent += rem; }
+        }
+        else if (t.type === 'borrowed') {
+          const rem = t.settled ? 0 : (t.remainingAmount !== undefined ? t.remainingAmount : amt);
+          if (rem > 0) { t.method === 'bank' ? b += rem : c += rem; debt += rem; }
+        }
+        else if (t.type === 'investment') { t.method === 'bank' ? b -= amt : c -= amt; inv += amt; }
+        else if (t.type === 'settlement') {
+          if (t.settlementFor === 'lent') t.method === 'bank' ? b += amt : c += amt;
+          if (t.settlementFor === 'borrowed') t.method === 'bank' ? b -= amt : c -= amt;
+        }
+      }
+      this._totalsKey = key;
+      this._totalsCache = { bank: b, cash: c, lent, debt, investment: inv, netWorth: b + c + inv + lent - debt };
+      return this._totalsCache;
+    },
+
+    get reportStats() {
+      let inc = 0, exp = 0;
+      for (const t of this.txs) {
+        if (t.type === 'income') inc += +t.amt || 0;
+        else if (t.type === 'expense') exp += +t.amt || 0;
+      }
+      return { totalIncome: inc, totalExpense: exp };
+    },
+
+    get filteredTxs() { return this._txsCache; },
+    get filteredLedger() { return this._ledgerCache; },
+
+    get paginatedLedger() {
+      const s = (this.ledgerCurrentPage - 1) * this.ledgerPageSize;
+      return this._ledgerCache.slice(s, s + this.ledgerPageSize);
+    },
+    ledgerTotalPages() { return Math.max(1, Math.ceil(this._ledgerCache.length / this.ledgerPageSize)); },
+
+    paginatedTxs() {
+      const s = (this.currentPage - 1) * this.pageSize;
+      return this._txsCache.slice(s, s + this.pageSize);
+    },
+    totalPages() { return Math.max(1, Math.ceil(this._txsCache.length / this.pageSize)); },
+
+    get topSpendingCategories() {
+      const cats = {};
+      for (const t of this.txs) {
+        if (t.type === 'expense') cats[t.category || 'Other'] = (cats[t.category || 'Other'] || 0) + (+t.amt || 0);
+      }
+      return Object.entries(cats).map(([category, amount]) => ({ category, amount }))
+        .sort((a, b) => b.amount - a.amount).slice(0, 5);
+    },
+
+    get savingsRate() {
+      const inc = this.txs.filter(t => t.type === 'income').reduce((a, b) => a + (+b.amt || 0), 0);
+      const exp = this.txs.filter(t => t.type === 'expense').reduce((a, b) => a + (+b.amt || 0), 0);
+      return inc === 0 ? 0 : Math.round(((inc - exp) / inc) * 100);
+    },
+
+    get budgetAlert() {
+      const now = new Date();
+      const monthlyExp = this.txs
+        .filter(t => t.type === 'expense' && new Date(t.date).getMonth() === now.getMonth() && new Date(t.date).getFullYear() === now.getFullYear())
+        .reduce((s, t) => s + (+t.amt || 0), 0);
+      if (this.budgetLimits.monthly > 0 && monthlyExp > this.budgetLimits.monthly * 0.9) {
+        return { show: true, message: `⚠️ Used ${Math.round(monthlyExp / this.budgetLimits.monthly * 100)}% of monthly budget (${this.formatCurrency(monthlyExp)} / ${this.formatCurrency(this.budgetLimits.monthly)})` };
+      }
+      return { show: false };
+    },
+
+    // ============================================================
+    // LIFECYCLE
+    // ============================================================
+    async init() {
+      this.getStorage();
+
+      let users = [];
+      try { users = JSON.parse(this.lsGet('budget_users') || '[]'); } catch { users = []; }
+
+      if (!users.some(u => u.username === 'admin')) {
+        const hash = await this.hashPassword('123');
+        users.push({ username: 'admin', password: hash, name: 'Admin' });
+        this.lsSet('budget_users', JSON.stringify(users));
+      }
+
+      // ✅ QW8: prefer saved preference, else prefers-color-scheme
+      const savedDark = this.lsGet('darkMode');
+      if (savedDark === 'true') this.darkMode = true;
+      else if (savedDark === 'false') this.darkMode = false;
+      else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) this.darkMode = true;
+      document.documentElement.classList.toggle('dark', this.darkMode);
+      this.updateThemeColor();
+
+      const ss = this.lsGet('budget_session') || this.ssGet('budget_session');
+      if (ss) {
+        try {
+          this.user = JSON.parse(ss);
+          this.isLoggedIn = true;
+          await this.loadUserData();
+          this.processRecurringTransactions();
+          this.setupIdleLock();
+        } catch (e) { console.warn('Session restore failed', e); }
+      }
+
+      // ✅ QW2: single watcher bumps revision & invalidates totals cache
+      this.$watch('txs', () => {
+        this._revision++;
+        this._totalsCache = null;
+        this._totalsKey = '';
+        this._debouncedSave();
+        if (this.activeTab === 'reports') this._debouncedRefreshChart();
+      });
+
+      this.$watch('activeTab', () => {
+        if (this.activeTab === 'reports') this._debouncedRefreshChart();
+      });
+      this.$watch('search', () => this.handleSearchDebounced());
+      this.$watch('transactionTypeFilter', () => this.refreshFilteredTxs());
+      this.$watch('ledgerSearch', () => this.debouncedLedgerSearch());
+      this.$watch('ledgerTypeFilter', () => this.refreshLedger());
+      this.$watch('ledgerSort', () => this.refreshLedger());
+
+      // ✅ QW1: Esc closes dropdown/shortcuts globally; but NOT when modal handles it
+      // ✅ QW7: keyboard shortcuts blocked while modals open
+      this._keydownHandler = (e) => {
+        if (!this.isLoggedIn) return;
+        const inModal = this.confirmModal.show || this.showLockScreen || this.showShortcuts ||
+                        this.showCategoryModal || this.showExportModal || this.showOpeningBalanceModal ||
+                        this.showRecurringModal || this.showSettleModal || this.showResetDataModal ||
+                        this.showDetailModal;
+
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+          if (e.key === 'Escape') e.target.blur();
+          return;
+        }
+        if (e.key === 'Escape') {
+          this.dropdownOpen = false;
+          // Only close shortcuts if no other modal open
+          if (this.showShortcuts && !inModal) this.showShortcuts = false;
+          return;
+        }
+        // Block all nav shortcuts while a modal is open
+        if (inModal) return;
+
+        if (e.key === '/') {
+          e.preventDefault();
+          (document.getElementById('ledgerSearchInput') || document.getElementById('txSearchInput'))?.focus();
+        }
+        if (e.key === '1') this.activeTab = 'dashboard';
+        if (e.key === '2') this.activeTab = 'ledger';
+        if (e.key === '3') this.activeTab = 'transactions';
+        if (e.key === '4') this.activeTab = 'reports';
+        if (e.key === '5') this.activeTab = 'recurring';
+        if (e.key === '6') this.activeTab = 'insights';
+      };
+      window.addEventListener('keydown', this._keydownHandler);
+
+      this._debouncedRefreshChart = this.debounce(() => this.refreshChart(), CONFIG.CHART_REFRESH_DEBOUNCE_MS);
+      this._debouncedSave = this.debounce(() => this.save(), CONFIG.SAVE_DEBOUNCE_MS);
+    },
+
+    debounce(f, w) {
+      let t;
+      return (...args) => { clearTimeout(t); t = setTimeout(() => f(...args), w); };
+    },
+
+    // ============================================================
+    // AUTH
+    // ============================================================
+    async hashPassword(pw) {
+      try {
+        if (window.crypto?.subtle && window.isSecureContext !== false) {
+          const enc = new TextEncoder();
+          const hash = await crypto.subtle.digest('SHA-256', enc.encode(pw));
+          return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+      } catch (e) { /* fall through */ }
+      // ✅ QW-fix: salt with fixed prefix (still demo-grade but explicit)
+      let h = 0;
+      const s = 'budget:v1:' + pw;
+      for (let i = 0; i < s.length; i++) {
+        h = ((h << 5) - h) + s.charCodeAt(i);
+        h |= 0;
+      }
+      return 'fallback:' + Math.abs(h).toString(16);
+    },
+
+    async handleAuth() {
+      this.isLoading = true;
+      try {
+        let users = [];
+        try { users = JSON.parse(this.lsGet('budget_users') || '[]'); } catch { users = []; }
+
+        if (this.authMode === 'register') {
+          const rf = this.registerForm;
+          if (!rf.username || rf.username.length < 3) { this.showToast('Username min 3 chars', 'error'); return; }
+          if (!rf.password || rf.password.length < 4) { this.showToast('Password min 4 chars', 'error'); return; }
+          if (users.find(u => u.username === rf.username)) { this.showToast('Username already exists', 'error'); return; }
+          const hashed = await this.hashPassword(rf.password);
+          users.push({ username: rf.username, password: hashed, name: rf.name, mobile: rf.mobile, email: rf.email });
+          this.lsSet('budget_users', JSON.stringify(users));
+          this.showToast('Registered! Please login.', 'success');
+          this.authMode = 'login';
+          this.authForm.username = rf.username;
+          this.registerForm = { name: '', mobile: '', email: '', username: '', password: '' };
+          return;
+        }
+
+        const hashed = await this.hashPassword(this.authForm.password);
+        const found = users.find(u => u.username === this.authForm.username && u.password === hashed);
+        if (!found) { this.showToast('Invalid credentials', 'error'); return; }
+        this.user = found;
+        this.isLoggedIn = true;
+        if (this.rememberMe) this.lsSet('budget_session', JSON.stringify(found));
+        else this.ssSet('budget_session', JSON.stringify(found));
+        await this.loadUserData();
+        this.processRecurringTransactions();
+        this.setupIdleLock();
+        this.showToast(`Welcome ${found.username}`, 'success');
+      } catch (e) {
+        console.error(e);
+        this.showToast('Auth error: ' + e.message, 'error');
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    toggleAuthMode() { this.authMode = this.authMode === 'login' ? 'register' : 'login'; },
+
+    logout() {
+      this.lsRemove('budget_session');
+      this.ssRemove('budget_session');
+      this.isLoggedIn = false;
+      this.user = null;
+      this.txs = [];
+      this._txsCache = [];
+      this._ledgerCache = [];
+      this.showToast('Logged out', 'success');
+    },
+
+    setupIdleLock() {
+      if (this._idleTimer) clearTimeout(this._idleTimer);
+      if (this._idleHandlers) {
+        // ✅ QW-fix: remove previous handlers to avoid stacking
+        Object.entries(this._idleHandlers).forEach(([ev, fn]) => window.removeEventListener(ev, fn));
+      }
+      const reset = () => {
+        if (this._idleTimer) clearTimeout(this._idleTimer);
+        this._idleTimer = setTimeout(() => {
+          if (this.isLoggedIn) {
+            this.showLockScreen = true;
+            this.lockPassword = '';
+            // ✅ QW7: focus lock input once rendered
+            this.$nextTick(() => this.$refs.lockInput?.focus());
+          }
+        }, CONFIG.IDLE_LOCK_MS);
+      };
+      this._idleHandlers = {};
+      ['click','keydown','mousemove','touchstart','scroll'].forEach(ev => {
+        const fn = () => reset();
+        this._idleHandlers[ev] = fn;
+        window.addEventListener(ev, fn, { passive: true });
+      });
+      reset();
+    },
+
+    async unlockSession() {
+      if (!this.user) return;
+      const hashed = await this.hashPassword(this.lockPassword);
+      if (hashed === this.user.password) {
+        this.showLockScreen = false;
+        this.lockPassword = '';
+      } else {
+        this.showToast('Incorrect password', 'error');
+      }
+    },
+
+    // ============================================================
+    // DATA LOAD / SAVE
+    // ============================================================
+    async loadUserData() {
+      const key = `budget_data_${this.user.username}`;
+      const raw = this.lsGet(key);
+      if (raw) {
+        try {
+          const p = JSON.parse(raw);
+          const data = p.version ? p.data : p;
+          this.txs = Array.isArray(data) ? data : [];
+        } catch { this.txs = []; }
+      } else {
+        this.txs = [];
+      }
+      this.txs = this.txs.map(t => this.sanitizeTx(t));
+
+      const ob = this.lsGet(`opening_balances_${this.user.username}`);
+      if (ob) { try { this.openingBalances = JSON.parse(ob); } catch(e){} }
+
+      const rec = this.lsGet(`recurring_${this.user.username}`);
+      if (rec) { try { this.recurringTransactions = JSON.parse(rec); } catch(e){} }
+
+      const cc = this.lsGet(`categories_${this.user.username}`);
+      if (cc) {
+        try {
+          this.customCategories = JSON.parse(cc);
+          this.customCategories.forEach(c => { if (!this.categories.includes(c)) this.categories.push(c); });
+        } catch(e){}
+      }
+
+      const limits = this.lsGet(`budget_limits_${this.user.username}`);
+      if (limits) { try { this.budgetLimits = { ...this.budgetLimits, ...JSON.parse(limits) }; } catch(e){} }
+
+      this._revision++;
+      this.refreshFilteredTxs();
+      this.refreshLedger();
+    },
+
+    sanitizeTx(t) {
+      const out = {
+        id: t.id || this.uid(),
+        type: t.type || 'expense',
+        method: t.method || 'bank',
+        date: t.date || new Date().toISOString().split('T')[0],
+        desc: String(t.desc || '').slice(0, 200),
+        amt: Number(t.amt) || 0,
+        category: t.category || 'Other',
+        settled: !!t.settled,
+        settledAmount: Number(t.settledAmount) || 0,
+        remainingAmount: t.remainingAmount !== undefined ? Number(t.remainingAmount) : undefined,
+        settlementFor: t.settlementFor,
+        originalTxId: t.originalTxId,
+        recurringParentId: t.recurringParentId,
+        notes: t.notes
+      };
+      if ((out.type === 'lent' || out.type === 'borrowed') && out.remainingAmount === undefined && !out.settled) {
+        out.remainingAmount = out.amt;
+        out.settledAmount = 0;
+      }
+      return out;
+    },
+
+    save() {
+      if (!this.user) return;
+      try {
+        this.lsSet(`budget_data_${this.user.username}`, JSON.stringify({ version: 2, data: this.txs }));
+        this.lsSet(`budget_limits_${this.user.username}`, JSON.stringify(this.budgetLimits));
+      } catch (e) {
+        console.error('Save failed', e);
+        this.showToast('Save failed — storage may be full', 'error');
+      }
+    },
+
+    saveOpeningBalances() {
+      this.lsSet(`opening_balances_${this.user.username}`, JSON.stringify(this.openingBalances));
+      this.showOpeningBalanceModal = false;
+      this._revision++;
+      this.showToast('Opening balances saved', 'success');
+    },
+
+    resetAllData() {
+      if (!this.resetConfirm) return;
+      const u = this.user.username;
+      ['budget_data_', 'opening_balances_', 'recurring_', 'categories_', 'budget_limits_'].forEach(p => {
+        this.lsRemove(p + u);
+      });
+      this.txs = [];
+      this.recurringTransactions = [];
+      this.customCategories = [];
+      this.openingBalances = { bank: 0, cash: 0, investment: 0 };
+      this._txsCache = [];
+      this._ledgerCache = [];
+      this._totalsCache = null;
+      this._totalsKey = '';
+      this._revision++;
+      // ✅ QW-fix: reset pagination & forms too
+      this.currentPage = 1;
+      this.ledgerCurrentPage = 1;
+      this.resetForm();
+      this.showResetDataModal = false;
+      this.resetConfirm = false;
+      this.showToast('All data reset', 'success');
+    },
+
+    // ============================================================
+    // TRANSACTIONS
+    // ============================================================
+    uid() {
+      if (window.crypto?.randomUUID) return crypto.randomUUID();
+      return 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    },
+
+    validateForm() {
+      if (!this.form.desc || !this.form.desc.trim()) { this.showToast('Description required', 'error'); return false; }
+      if (!this.form.amt || Number(this.form.amt) <= 0) { this.showToast('Amount must be > 0', 'error'); return false; }
+      if (!this.form.date) { this.showToast('Date required', 'error'); return false; }
+      return true;
+    },
+
+    addTx() {
+      if (!this.validateForm()) return;
+      const amt = Number(this.form.amt);
+      const isLedgerType = this.form.type === 'lent' || this.form.type === 'borrowed';
+
+      const newTx = {
+        id: this.form.id || this.uid(),
+        type: this.form.type,
+        method: this.form.method,
+        date: this.form.date,
+        desc: String(this.form.desc).trim(),
+        amt,
+        category: (this.form.category || 'Other').trim() || 'Other',
+        settled: false,
+        settledAmount: 0,
+        remainingAmount: isLedgerType ? amt : undefined
+      };
+
+      if (this.form.id) {
+        const old = this.txs.find(t => t.id === this.form.id);
+        if (old && (old.type === 'lent' || old.type === 'borrowed')) {
+          newTx.settledAmount = old.settledAmount || 0;
+          newTx.settled = old.settled || false;
+          newTx.remainingAmount = Math.max(0, amt - newTx.settledAmount);
+          if (newTx.remainingAmount === 0) newTx.settled = true;
+        }
+        this.txs = this.txs.map(t => t.id === this.form.id ? newTx : t);
+        this.showToast('Transaction updated', 'success');
+      } else {
+        this.txs = [...this.txs, newTx];
+        this.showToast('Transaction added', 'success');
+        if (this.form.makeRecurring) {
+          this.recurringTransactions.push({
+            id: this.uid(), desc: newTx.desc, amt: newTx.amt, type: newTx.type,
+            method: newTx.method, category: newTx.category,
+            frequency: this.form.recurringFrequency,
+            nextDueDate: this.form.recurringNextDate,
+            endDate: this.form.recurringEndDate || '',
+            active: true
+          });
+          this.lsSet(`recurring_${this.user.username}`, JSON.stringify(this.recurringTransactions));
+        }
+      }
+
+      this.resetForm();
+      this.refreshFilteredTxs();
+      this.refreshLedger();
+    },
+
+    resetForm() {
+      const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth() + 1);
+      this.form = {
+        id: null, type: 'expense', method: 'bank',
+        date: new Date().toISOString().split('T')[0],
+        desc: '', amt: '', category: '',
+        makeRecurring: false, recurringFrequency: 'monthly',
+        recurringNextDate: nextMonth.toISOString().split('T')[0],
+        recurringEndDate: '', recurringParentId: null
+      };
+    },
+
+    editTx(tx) {
+      this.form = {
+        ...tx,
+        amt: tx.amt,
+        makeRecurring: false,
+        recurringFrequency: 'monthly',
+        recurringNextDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
+        recurringEndDate: ''
+      };
+      this.activeTab = 'dashboard';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    editTxFromLedger(tx) { this.editTx(tx); },
+
+    safeDeleteTx(id) {
+      const idx = this.txs.findIndex(t => t.id === id);
+      if (idx === -1) return;
+      const backup = this.txs[idx];
+      this.txs = this.txs.filter(t => t.id !== id);
+      this.refreshFilteredTxs();
+      this.refreshLedger();
+      this.showUndo(`Deleted "${backup.desc.slice(0, 30)}"`, backup, idx);
+    },
+
+    showUndo(message, backup, idx) {
+      if (this.undoToast._timer) clearTimeout(this.undoToast._timer);
+      this.undoToast = { show: true, message, _deleted: { tx: backup, idx }, _timer: null };
+      this.undoToast._timer = setTimeout(() => { this.undoToast.show = false; }, CONFIG.UNDO_DURATION_MS);
+    },
+
+    undoDelete() {
+      const d = this.undoToast._deleted;
+      if (!d) return;
+      const arr = [...this.txs];
+      arr.splice(d.idx, 0, d.tx);
+      this.txs = arr;
+      this.refreshFilteredTxs();
+      this.refreshLedger();
+      if (this.undoToast._timer) clearTimeout(this.undoToast._timer);
+      this.undoToast.show = false;
+      this.showToast('Restored', 'success');
+    },
+
+    // ============================================================
+    // SETTLE
+    // ============================================================
+    openSettleForm(tx) {
+      // ✅ QW3: guard — only lent/borrowed may be settled
+      if (tx.type !== 'lent' && tx.type !== 'borrowed') {
+        this.showToast('Only lent/borrowed can be settled', 'error');
+        return;
+      }
+      const rem = (!tx.settled && tx.remainingAmount !== undefined && tx.remainingAmount > 0)
+        ? tx.remainingAmount : (tx.settled ? 0 : tx.amt);
+      if (rem <= 0) { this.showToast('Nothing left to settle', 'warning'); return; }
+      this.settleForm = {
+        transactionId: tx.id,
+        originalDesc: tx.desc,
+        originalAmount: tx.amt,
+        remainingAmount: rem,
+        amount: rem,
+        date: new Date().toISOString().split('T')[0],
+        method: 'bank',
+        notes: ''
+      };
+      this.showSettleModal = true;
+    },
+
+    closeSettleForm() { this.showSettleModal = false; },
+
+    processSettleForm() {
+      const amt = Number(this.settleForm.amount);
+      if (!amt || amt <= 0) { this.showToast('Invalid amount', 'error'); return; }
+      if (amt > this.settleForm.remainingAmount + CONFIG.AMOUNT_EPSILON) { this.showToast('Amount exceeds remaining', 'error'); return; }
+
+      const orig = this.txs.find(t => t.id === this.settleForm.transactionId);
+      if (!orig) { this.showToast('Original not found', 'error'); return; }
+      // ✅ QW3: guard again at processing time
+      if (orig.type !== 'lent' && orig.type !== 'borrowed') {
+        this.showToast('Invalid transaction type for settlement', 'error');
+        return;
+      }
+
+      const newSettledAmt = (orig.settledAmount || 0) + amt;
+      const full = newSettledAmt >= orig.amt - CONFIG.AMOUNT_EPSILON;
+      const newRemaining = Math.max(0, orig.amt - newSettledAmt);
+
+      const updated = this.txs.map(t => t.id === orig.id
+        ? { ...t, settledAmount: newSettledAmt, settled: full, remainingAmount: newRemaining }
+        : t);
+
+      const settleEntry = {
+        id: this.uid(),
+        date: this.settleForm.date,
+        type: 'settlement',
+        method: this.settleForm.method,
+        desc: `Settlement${full ? ' (Full)' : ' (Partial)'}: ${orig.desc}`,
+        amt,
+        category: 'Settlement',
+        settled: true,
+        settlementFor: orig.type,
+        originalTxId: orig.id,
+        notes: this.settleForm.notes
+      };
+
+      this.txs = [...updated, settleEntry];
+      this.refreshFilteredTxs();
+      this.refreshLedger();
+      this.showToast(`${full ? 'Fully' : 'Partially'} settled ${this.formatCurrency(amt, 2)}`, 'success');
+      this.closeSettleForm();
+    },
+
+    // ============================================================
+    // CATEGORIES
+    // ============================================================
+    addCustomCategory() {
+      const c = (this.newCategory || '').trim();
+      if (!c) return;
+      if (this.categories.includes(c)) { this.showToast('Category exists', 'warning'); return; }
+      this.categories.push(c);
+      this.customCategories.push(c);
+      this.lsSet(`categories_${this.user.username}`, JSON.stringify(this.customCategories));
+      this.newCategory = '';
+      this.showToast('Category added', 'success');
+    },
+
+    removeCustomCategory(cat) {
+      this.categories = this.categories.filter(c => c !== cat);
+      this.customCategories = this.customCategories.filter(c => c !== cat);
+      this.lsSet(`categories_${this.user.username}`, JSON.stringify(this.customCategories));
+    },
+
+    filterCategories() {
+      const q = (this.form.category || '').toLowerCase();
+      this.filteredCategories = q
+        ? this.categories.filter(c => c.toLowerCase().includes(q)).slice(0, 8)
+        : this.categories.slice(0, 8);
+    },
+
+    // ============================================================
+    // RECURRING
+    // ============================================================
+    openRecurringModal(rt = null) {
+      if (rt) {
+        this.recurringForm = { ...rt };
+      } else {
+        const next = new Date(); next.setDate(next.getDate() + 1);
+        this.recurringForm = {
+          id: null, type: 'expense', method: 'bank', frequency: 'monthly',
+          nextDueDate: next.toISOString().split('T')[0],
+          endDate: '', active: true, amt: 1000, desc: 'Recurring Payment', category: 'Other'
+        };
+      }
+      this.showRecurringModal = true;
+    },
+
+    addRecurringTransaction() {
+      const f = this.recurringForm;
+      if (!f.nextDueDate || !f.desc || !f.amt || f.amt <= 0) { this.showToast('Fill all fields', 'error'); return; }
+
+      if (f.id) {
+        const i = this.recurringTransactions.findIndex(r => r.id === f.id);
+        if (i !== -1) this.recurringTransactions[i] = { ...f };
+        this.showToast('Recurring updated', 'success');
+      } else {
+        this.recurringTransactions.push({ ...f, id: this.uid(), active: true });
+        this.showToast('Recurring added', 'success');
+      }
+      this.lsSet(`recurring_${this.user.username}`, JSON.stringify(this.recurringTransactions));
+      this.showRecurringModal = false;
+    },
+
+    deleteRecurring(id) {
+      this.showConfirm('Delete Recurring', 'Delete this recurring transaction?', () => {
+        this.recurringTransactions = this.recurringTransactions.filter(rt => rt.id !== id);
+        this.lsSet(`recurring_${this.user.username}`, JSON.stringify(this.recurringTransactions));
+        this.showToast('Deleted', 'success');
+      });
+    },
+
+    processRecurringTransactions() {
+      const today = new Date(); today.setHours(23, 59, 59, 999);
+      let added = 0;
+
+      const existing = new Set(
+        this.txs.filter(t => t.recurringParentId).map(t => `${t.recurringParentId}|${t.date}`)
+      );
+
+      const advance = (dateStr, freq) => {
+        const d = new Date(dateStr);
+        if (freq === 'daily') d.setDate(d.getDate() + 1);
+        else if (freq === 'weekly') d.setDate(d.getDate() + 7);
+        else if (freq === 'monthly') d.setMonth(d.getMonth() + 1);
+        else if (freq === 'yearly') d.setFullYear(d.getFullYear() + 1);
+        return d;
+      };
+
+      const newTxs = [];
+      const updatedRecurring = this.recurringTransactions.map(rt => {
+        if (!rt.active) return rt;
+        let next = new Date(rt.nextDueDate);
+        let guard = 0;
+        let active = rt.active;
+        while (next <= today && guard < CONFIG.RECURRING_GUARD_MAX) {
+          const dateStr = next.toISOString().split('T')[0];
+          const key = `${rt.id}|${dateStr}`;
+          if (!existing.has(key)) {
+            const newTx = {
+              id: this.uid(),
+              date: dateStr,
+              type: rt.type,
+              method: rt.method,
+              desc: `[Recurring] ${rt.desc}`,
+              amt: rt.amt,
+              category: rt.category || 'Other',
+              settled: false,
+              recurringParentId: rt.id
+            };
+            if (rt.type === 'lent' || rt.type === 'borrowed') {
+              newTx.remainingAmount = rt.amt;
+              newTx.settledAmount = 0;
+            }
+            newTxs.push(newTx);
+            existing.add(key);
+            added++;
+          }
+          next = advance(dateStr, rt.frequency);
+          if (rt.endDate && next > new Date(rt.endDate)) { active = false; break; }
+          guard++;
+        }
+        return { ...rt, nextDueDate: next.toISOString().split('T')[0], active };
+      });
+
+      if (added > 0) {
+        this.txs = [...this.txs, ...newTxs];
+        this.recurringTransactions = updatedRecurring;
+        this.lsSet(`recurring_${this.user.username}`, JSON.stringify(this.recurringTransactions));
+        this.refreshFilteredTxs();
+        this.refreshLedger();
+        this.showToast(`Generated ${added} recurring transaction(s)`, 'info');
+      } else {
+        // still persist any active->inactive change
+        this.recurringTransactions = updatedRecurring;
+      }
+    },
+
+    // ============================================================
+    // DETAIL REPORT
+    // ============================================================
+    showDetailedReport(type) {
+      let transactions = [], total = 0, title = '';
+      const t = this.totals;
+
+      if (type === 'bank') {
+        title = '🏦 Bank Statement (all bank transactions)';
+        transactions = this.txs.filter(x => x.method === 'bank').sort((a, b) => new Date(b.date) - new Date(a.date));
+        total = t.bank;
+      } else if (type === 'cash') {
+        title = '💵 Cash Statement (all cash transactions)';
+        transactions = this.txs.filter(x => x.method === 'cash').sort((a, b) => new Date(b.date) - new Date(a.date));
+        total = t.cash;
+      } else if (type === 'receivable') {
+        title = '💰 Receivable (Pending Lent)';
+        transactions = this.txs
+          .filter(x => x.type === 'lent' && !x.settled && (x.remainingAmount ?? x.amt) > 0)
+          .map(x => ({ ...x, remainingAmount: x.remainingAmount ?? x.amt }));
+        total = t.lent;
+      } else if (type === 'payable') {
+        title = '📋 Payable (Pending Borrowed)';
+        transactions = this.txs
+          .filter(x => x.type === 'borrowed' && !x.settled && (x.remainingAmount ?? x.amt) > 0)
+          .map(x => ({ ...x, remainingAmount: x.remainingAmount ?? x.amt }));
+        total = t.debt;
+      } else if (type === 'investment') {
+        title = '📈 Investment History';
+        transactions = this.txs.filter(x => x.type === 'investment').sort((a, b) => new Date(b.date) - new Date(a.date));
+        total = t.investment;
+      } else if (type === 'networth') {
+        title = '💰 Net Worth Breakdown';
+        transactions = [
+          { id: 'nw-b', desc: 'Bank Balance', date: new Date().toISOString().split('T')[0], amt: t.bank, method: '' },
+          { id: 'nw-c', desc: 'Cash Balance', date: new Date().toISOString().split('T')[0], amt: t.cash, method: '' },
+          { id: 'nw-i', desc: 'Investments', date: new Date().toISOString().split('T')[0], amt: t.investment, method: '' },
+          { id: 'nw-l', desc: 'Receivable (Lent)', date: new Date().toISOString().split('T')[0], amt: t.lent, method: '' },
+          { id: 'nw-d', desc: 'Payable (Borrowed)', date: new Date().toISOString().split('T')[0], amt: -t.debt, method: '' }
+        ];
+        total = t.netWorth;
+      }
+
+      this.detailModalTitle = title;
+      this.detailModalTotal = total;
+      this.detailModalTransactions = transactions;
+      this.showDetailModal = true;
+    },
+
+    // ============================================================
+    // FILTERS / PAGINATION
+    // ============================================================
+    refreshFilteredTxs() {
+      const q = this.search.toLowerCase().trim();
+      const f = this.transactionTypeFilter;
+      this._txsCache = this.txs
+        .filter(t =>
+          (!q || (t.desc && t.desc.toLowerCase().includes(q)) || (t.category && t.category.toLowerCase().includes(q)))
+          && (f === 'all' || t.type === f)
+        )
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      this.currentPage = Math.min(this.currentPage, this.totalPages()) || 1;
+    },
+
+    refreshLedger() {
+      const q = this.ledgerSearch.toLowerCase().trim();
+      const f = this.ledgerTypeFilter;
+      let list = this.txs.filter(t =>
+        (!q || (t.desc && t.desc.toLowerCase().includes(q)) || (t.category && t.category.toLowerCase().includes(q)))
+        && (f === 'all' || t.type === f)
+      );
+      const [key, dir] = this.ledgerSort.split('-');
+      list.sort((a, b) => {
+        let v = 0;
+        if (key === 'date') v = new Date(a.date) - new Date(b.date);
+        else if (key === 'amount') v = a.amt - b.amt;
+        return dir === 'asc' ? v : -v;
+      });
+      this._ledgerCache = list;
+      this.ledgerCurrentPage = 1;
+    },
+
+    debouncedLedgerSearch() {
+      clearTimeout(this.ledgerSearchDebounceTimer);
+      this.ledgerSearchDebounceTimer = setTimeout(() => this.refreshLedger(), CONFIG.SEARCH_DEBOUNCE_MS);
+    },
+
+    handleSearchDebounced() {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = setTimeout(() => this.refreshFilteredTxs(), CONFIG.SEARCH_DEBOUNCE_MS);
+    },
+
+    // ============================================================
+    // CHART
+    // ============================================================
+    async refreshChart() {
+      await this.$nextTick();
+      const canvas = document.getElementById('trendChart');
+      if (!canvas || typeof Chart === 'undefined') return;
+
+      const monthly = new Map();
+      const now = new Date();
+      const start = this.reportRange === 'year'
+        ? new Date(now.getFullYear() - 1, now.getMonth(), 1)
+        : new Date(now.getFullYear(), now.getMonth() - 11, 1);
+
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+      this.txs.forEach(t => {
+        const d = new Date(t.date);
+        if (d < start) return;
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
+        const label = months[d.getMonth()] + (this.reportRange === 'year' ? ` '${String(d.getFullYear()).slice(-2)}` : '');
+        if (!monthly.has(key)) monthly.set(key, { label, income: 0, expense: 0, order: d.getFullYear() * 12 + d.getMonth() });
+        const e = monthly.get(key);
+        if (t.type === 'income') e.income += +t.amt || 0;
+        if (t.type === 'expense') e.expense += +t.amt || 0;
+      });
+
+      const sorted = Array.from(monthly.values()).sort((a, b) => a.order - b.order);
+
+      if (this._chartInstance) this._chartInstance.destroy();
+      this._chartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: sorted.map(s => s.label),
+          datasets: [
+            { label: 'Income', data: sorted.map(s => s.income), backgroundColor: '#10b981', borderRadius: 6 },
+            { label: 'Expense', data: sorted.map(s => s.expense), backgroundColor: '#f43f5e', borderRadius: 6 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    },
+
+    // ============================================================
+    // EXPORT / IMPORT
+    // ============================================================
+    exportWithFilters() {
+      const from = this.exportDateFrom ? new Date(this.exportDateFrom) : null;
+      const to = this.exportDateTo ? new Date(this.exportDateTo) : null;
+      const data = this.txs
+        .filter(t => (!from || new Date(t.date) >= from) && (!to || new Date(t.date) <= to))
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .map(t => ({
+          Date: t.date, Description: t.desc, Type: t.type, Method: t.method,
+          Category: t.category, Amount: t.amt,
+          Settled: t.settled ? 'Yes' : 'No',
+          Remaining: t.remainingAmount ?? ''
+        }));
+
+      const fmt = this.exportFormat;
+      this.showExportModal = false;
+      if (!data.length) { this.showToast('No data in range', 'warning'); return; }
+
+      if (fmt === 'csv') this.downloadCSV(data);
+      else if (fmt === 'json') this.downloadJSON(data);
+      else if (fmt === 'excel') this.downloadExcel(data);
+      else if (fmt === 'pdf') this.downloadPDF(data);
+    },
+
+    downloadCSV(data) {
+      const headers = Object.keys(data[0]);
+      const csv = [headers.join(','), ...data.map(r => headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(','))].join('\n');
+      this._downloadBlob(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }), `budget_${Date.now()}.csv`);
+    },
+
+    downloadJSON(data) {
+      this._downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `budget_${Date.now()}.json`);
+    },
+
+    downloadExcel(data) {
+      if (typeof XLSX === 'undefined') { this.showToast('Excel library not loaded', 'error'); return; }
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+      XLSX.writeFile(wb, `budget_${Date.now()}.xlsx`);
+    },
+
+    // ✅ QW4: escape HTML in PDF to prevent XSS
+    _escapeHtml(v) {
+      return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    },
+
+    downloadPDF(data) {
+      if (typeof html2pdf === 'undefined') { this.showToast('PDF library not loaded', 'error'); return; }
+      const headers = Object.keys(data[0]);
+      const html = `
+        <div style="font-family: Inter, sans-serif; padding: 20px;">
+          <h1 style="color:#4F46E5">Budget Report</h1>
+          <p>Generated: ${this._escapeHtml(new Date().toLocaleString())}</p>
+          <table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:12px;">
+            <thead><tr style="background:#eef2ff;">${headers.map(h => `<th style="border:1px solid #ccc; padding:6px; text-align:left;">${this._escapeHtml(h)}</th>`).join('')}</tr></thead>
+            <tbody>${data.map(r => `<tr>${headers.map(h => `<td style="border:1px solid #ccc; padding:6px;">${this._escapeHtml(r[h])}</td>`).join('')}</tr>`).join('')}</tbody>
+          </table>
+        </div>`;
+      html2pdf().from(html).set({ margin: 10, filename: `budget_${Date.now()}.pdf`, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).save();
+    },
+
+    _downloadBlob(blob, filename) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    },
+
+    exportData() {
+      const payload = {
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        user: this.user?.username,
+        transactions: this.txs,
+        openingBalances: this.openingBalances,
+        recurringTransactions: this.recurringTransactions,
+        customCategories: this.customCategories,
+        budgetLimits: this.budgetLimits
+      };
+      this._downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `backup_${Date.now()}.json`);
+      this.showToast('Backup downloaded', 'success');
+    },
+
+    triggerImport() { document.getElementById('fileInput').click(); },
+
+    importData(e) {
+      const file = e.target.files?.[0];
+      e.target.value = '';
+      if (!file) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        try {
+          const imp = JSON.parse(ev.target.result);
+          if (Array.isArray(imp)) {
+            this.txs = imp.map(t => this.sanitizeTx(t));
+          } else {
+            if (Array.isArray(imp.transactions)) this.txs = imp.transactions.map(t => this.sanitizeTx(t));
+            if (imp.openingBalances) this.openingBalances = { ...this.openingBalances, ...imp.openingBalances };
+            if (Array.isArray(imp.recurringTransactions)) this.recurringTransactions = imp.recurringTransactions;
+            if (Array.isArray(imp.customCategories)) {
+              this.customCategories = imp.customCategories;
+              this.customCategories.forEach(c => { if (!this.categories.includes(c)) this.categories.push(c); });
+            }
+            if (imp.budgetLimits) this.budgetLimits = { ...this.budgetLimits, ...imp.budgetLimits };
+          }
+          this.save();
+          this.refreshFilteredTxs();
+          this.refreshLedger();
+          this.lsSet(`opening_balances_${this.user.username}`, JSON.stringify(this.openingBalances));
+          this.lsSet(`recurring_${this.user.username}`, JSON.stringify(this.recurringTransactions));
+          this.showToast('Imported successfully', 'success');
+        } catch (err) {
+          console.error(err);
+          this.showToast('Invalid JSON file', 'error');
+        }
+      };
+      r.readAsText(file);
+    },
+
+    importFromExcel(event) {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+      if (typeof XLSX === 'undefined') { this.showToast('Excel library not loaded', 'error'); return; }
+      const r = new FileReader();
+      r.onload = ev => {
+        try {
+          const wb = XLSX.read(ev.target.result, { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          const imported = rows.map(row => this.sanitizeTx({
+            date: this._parseExcelDate(row.Date || row.date),
+            desc: row.Description || row.desc || '',
+            type: (row.Type || row.type || 'expense').toLowerCase(),
+            method: (row.Method || row.method || 'bank').toLowerCase(),
+            category: row.Category || row.category || 'Other',
+            amt: Number(row.Amount || row.amt) || 0,
+            settled: String(row.Settled || '').toLowerCase() === 'yes'
+          }));
+          if (!imported.length) { this.showToast('No rows found', 'warning'); return; }
+          this.txs = [...this.txs, ...imported];
+          this.refreshFilteredTxs();
+          this.refreshLedger();
+          this.showToast(`Imported ${imported.length} rows`, 'success');
+        } catch (err) {
+          console.error(err);
+          this.showToast('Excel parse failed', 'error');
+        }
+      };
+      r.readAsArrayBuffer(file);
+    },
+
+    _parseExcelDate(v) {
+      if (!v) return new Date().toISOString().split('T')[0];
+      if (typeof v === 'number') {
+        const d = new Date((v - 25569) * 86400 * 1000);
+        return d.toISOString().split('T')[0];
+      }
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? new Date().toISOString().split('T')[0] : d.toISOString().split('T')[0];
+    },
+
+    // ============================================================
+    // UTILITIES
+    // ============================================================
+    formatCurrency(v, digits = 0) {
+      const n = Number(v) || 0;
+      return new Intl.NumberFormat(CONFIG.LOCALE, {
+        style: 'currency', currency: CONFIG.CURRENCY,
+        minimumFractionDigits: digits, maximumFractionDigits: digits
+      }).format(n);
+    },
+
+    formatDisplayDate(d) {
+      try { return new Date(d).toLocaleDateString(CONFIG.LOCALE, { day: '2-digit', month: 'short', year: '2-digit' }); }
+      catch { return d || ''; }
+    },
+
+    showToast(message, type = 'success') {
+      const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+      this.toast = { show: true, message, type, icon: icons[type] || '📢' };
+      const duration = CONFIG.TOAST_DURATION[type] || CONFIG.TOAST_DURATION.default;
+      setTimeout(() => { this.toast.show = false; }, duration);
+    },
+
+    showConfirm(title, message, cb, requireText = '') {
+      this.confirmModal = { show: true, title, message, requireText, inputValue: '', _resolve: cb };
+      // ✅ QW7: focus required-text input if present
+      if (requireText) this.$nextTick(() => this.$refs.confirmInput?.focus());
+    },
+
+    resolveConfirm(ok) {
+      const cb = this.confirmModal._resolve;
+      this.confirmModal = { show: false, title: '', message: '', requireText: '', inputValue: '', _resolve: null };
+      if (ok && cb) cb();
+    },
+
+    toggleDropdown() { this.dropdownOpen = !this.dropdownOpen; },
+
+    toggleDarkMode() {
+      this.darkMode = !this.darkMode;
+      this.lsSet('darkMode', this.darkMode);
+      document.documentElement.classList.toggle('dark', this.darkMode);
+      this.updateThemeColor();
+    },
+
+    updateThemeColor() {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.content = this.darkMode ? '#0f172a' : '#4F46E5';
+    },
+
+    syncToCloud() {
+      this.isSyncing = true;
+      setTimeout(() => {
+        this.isSyncing = false;
+        this.showToast('Cloud sync is a demo feature', 'info');
+      }, 1200);
+    }
+  };
+}
+
+// ============================================================
+// PWA install prompt + service worker
+// ============================================================
+(function () {
+  let deferredInstallPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', function (event) {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    const btn = document.getElementById('pwaInstallButton');
+    if (btn) btn.hidden = false;
+  });
+
+  window.addEventListener('appinstalled', function () {
+    const btn = document.getElementById('pwaInstallButton');
+    if (btn) { btn.hidden = true; btn.textContent = '✓ Installed'; }
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const installBtn = document.getElementById('pwaInstallButton');
+    if (installBtn) {
+      installBtn.addEventListener('click', async function () {
+        if (!deferredInstallPrompt) {
+          alert('To install: open your browser menu and choose "Install app" or "Add to Home Screen".');
+          return;
+        }
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        installBtn.hidden = true;
+      });
+    }
+
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+      navigator.serviceWorker.register('./service-worker.js').catch(function (err) {
+        console.warn('SW registration failed:', err);
+      });
+    }
+  });
+})();
+</script>
+</body>
+</html>
