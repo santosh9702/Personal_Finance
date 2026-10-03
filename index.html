@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=yes">
 <meta name="theme-color" content="#4F46E5">
-<meta name="description" content="Smart Personal Finance Manager — track income, expenses, budgets and balances.">
+<meta name="description" content="Smart Personal Finance Manager — track income, expenses, budgets and accounts.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -44,22 +44,16 @@
   .dark .mobile-bottom-nav { background: rgba(30, 41, 59, 0.95); border-top-color: rgba(255,255,255,0.05); }
 
   .nav-item {
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 1 1 0; min-width: 0;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     gap: 2px; padding: 6px 2px;
-    border-radius: 14px;
-    font-size: 10px; font-weight: 600;
-    transition: all 0.2s ease;
-    overflow: hidden;
-    min-height: 44px;
-    touch-action: manipulation;
+    border-radius: 14px; font-size: 10px; font-weight: 600;
+    transition: all 0.2s ease; overflow: hidden;
+    min-height: 44px; touch-action: manipulation;
   }
   .nav-item > span:last-child {
-    max-width: 100%;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    line-height: 1.1;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.1;
   }
   .nav-item-active { background: rgba(79, 70, 229, 0.15); color: #4F46E5; transform: scale(0.95); }
   .dark .nav-item-active { background: rgba(79, 70, 229, 0.25); color: #818CF8; }
@@ -76,14 +70,14 @@
   .type-borrowed { background: #8b5cf620; color: #8b5cf6; }
   .type-investment { background: #06b6d420; color: #06b6d4; }
   .type-settlement { background: #6366f120; color: #6366f1; }
+  .type-transfer { background: #0891b220; color: #0891b2; }
 
-  /* ---------- Dropdown (desktop popover, mobile bottom sheet) ---------- */
+  /* ---------- Dropdown ---------- */
   .dropdown-menu {
     position: absolute; right: 0; top: 100%; margin-top: 8px;
     background: white; border-radius: 12px;
     box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
-    min-width: 220px;
-    max-width: min(280px, calc(100vw - 32px));
+    min-width: 220px; max-width: min(280px, calc(100vw - 32px));
     z-index: 50; overflow: hidden;
   }
   .dark .dropdown-menu { background: #1e293b; border: 1px solid #334155; }
@@ -116,7 +110,7 @@
 
   /* ---------- Modals ---------- */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .modal-panel { background: white; border-radius: 16px; width: 100%; max-width: min(480px, calc(100vw - 24px)); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); max-height: 90vh; display: flex; flex-direction: column; }
+  .modal-panel { background: white; border-radius: 16px; width: 100%; max-width: min(520px, calc(100vw - 24px)); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); max-height: 90vh; display: flex; flex-direction: column; }
   .dark .modal-panel { background: #1e293b; }
   .modal-header { padding: 16px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
   .dark .modal-header { border-bottom-color: #334155; }
@@ -133,7 +127,17 @@
   .empty-state { text-align: center; padding: 32px 16px; color: #94a3b8; }
   .empty-state-icon { font-size: 40px; margin-bottom: 8px; }
 
-  /* Focus ring for keyboard users */
+  /* Account chip */
+  .acct-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 20px;
+    background: #eef2ff; color: #4338ca;
+    font-size: 10px; font-weight: 700;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .dark .acct-chip { background: #312e81; color: #a5b4fc; }
+  .acct-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
   :focus-visible { outline: 2px solid #4F46E5; outline-offset: 2px; }
   .dark :focus-visible { outline-color: #818CF8; }
 
@@ -147,7 +151,6 @@
     .nav-item > span:first-child { font-size: 18px; line-height: 1; }
     .nav-item > span:last-child { font-size: 9px; letter-spacing: -0.2px; }
 
-    /* Dropdown → bottom sheet on mobile */
     .dropdown-menu {
       position: fixed; top: auto; left: 8px; right: 8px;
       bottom: calc(72px + env(safe-area-inset-bottom));
@@ -177,7 +180,7 @@
       x-init="init()"
       :class="darkMode ? 'dark' : ''">
 
-<!-- Loading Overlay -->
+<!-- Loading -->
 <div x-show="isLoading" class="modal-backdrop" x-cloak role="dialog" aria-modal="true" aria-label="Loading">
   <div class="modal-panel max-w-xs p-6 flex flex-col items-center">
     <div class="spinner"></div>
@@ -256,7 +259,7 @@
             <div class="min-w-0 flex-1">
               <div class="font-medium text-sm truncate" x-text="tx.desc"></div>
               <div class="text-xs text-slate-500 truncate"
-                   x-text="formatDisplayDate(tx.date) + (tx.method ? ' • ' + tx.method : '') + (tx.remainingAmount ? ' • Pending: ' + formatCurrency(tx.remainingAmount) : '')"></div>
+                   x-text="formatDisplayDate(tx.date) + (tx.accountName ? ' • ' + tx.accountName : (tx.method ? ' • ' + tx.method : '')) + (tx.remainingAmount ? ' • Pending: ' + formatCurrency(tx.remainingAmount) : '')"></div>
             </div>
             <div class="font-bold text-amber-600 whitespace-nowrap" x-text="formatCurrency(tx.remainingAmount || tx.amt)"></div>
           </div>
@@ -287,8 +290,7 @@
     </div>
     <div class="modal-body pt-0 space-y-3">
       <input type="password" x-model="lockPassword" placeholder="Enter password to unlock"
-             class="input-field" @keyup.enter="unlockSession()"
-             x-ref="lockInput" autofocus>
+             class="input-field" @keyup.enter="unlockSession()" x-ref="lockInput" autofocus>
       <button @click="unlockSession()" class="btn-primary w-full">Unlock Session</button>
       <button @click="logout()" class="btn-secondary w-full">Logout Instead</button>
     </div>
@@ -322,6 +324,127 @@
     </div>
     <div class="modal-footer">
       <button @click="showCategoryModal = false" class="btn-primary">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ACCOUNTS MANAGER MODAL (NEW) ============ -->
+<div x-show="showAccountsModal" class="modal-backdrop" x-cloak
+     role="dialog" aria-modal="true" aria-label="Manage bank accounts"
+     @keydown.escape.window="closeAccountsModal()"
+     x-trap.inert.noscroll="showAccountsModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 class="text-xl font-bold">🏦 Bank Accounts</h3>
+      <button @click="closeAccountsModal()" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body space-y-3">
+      <!-- Add / Edit form -->
+      <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl space-y-2">
+        <div class="text-xs font-bold text-indigo-700 dark:text-indigo-300"
+             x-text="accountForm.id ? '✏️ Edit Account' : '➕ Add New Account'"></div>
+        <input type="text" x-model="accountForm.name" placeholder="Account name (e.g. HDFC Savings)"
+               class="input-field" maxlength="40">
+        <div class="grid grid-cols-2 gap-2">
+          <select x-model="accountForm.type" class="input-field">
+            <option value="savings">Savings</option>
+            <option value="current">Current</option>
+            <option value="credit">Credit Card</option>
+            <option value="wallet">Wallet</option>
+            <option value="other">Other</option>
+          </select>
+          <input type="number" x-model.number="accountForm.openingBalance"
+                 placeholder="Opening ₹" class="input-field" step="0.01">
+        </div>
+        <input type="text" x-model="accountForm.notes" placeholder="Notes (optional)"
+               class="input-field" maxlength="80">
+        <div class="flex gap-2">
+          <button @click="saveAccount()" class="flex-1 bg-indigo-600 text-white py-2 rounded-xl font-bold text-sm"
+                  x-text="accountForm.id ? 'Update Account' : 'Add Account'"></button>
+          <button x-show="accountForm.id" @click="resetAccountForm()"
+                  class="bg-slate-300 dark:bg-slate-600 px-3 rounded-xl font-bold text-sm">✕</button>
+        </div>
+      </div>
+
+      <!-- Accounts list -->
+      <div class="space-y-2 max-h-72 overflow-y-auto">
+        <template x-for="acc in accounts" :key="acc.id">
+          <div class="border dark:border-slate-700 rounded-xl p-3 flex justify-between items-center gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="acct-chip"><span class="dot"></span><span x-text="acc.name"></span></span>
+                <span class="text-[10px] uppercase text-slate-400 font-bold" x-text="acc.type"></span>
+              </div>
+              <div class="text-xs text-slate-500 mt-1"
+                   x-text="'Opening: ' + formatCurrency(acc.openingBalance) + ' • Current: ' + formatCurrency(accountBalance(acc.id))"></div>
+              <div x-show="acc.notes" class="text-[10px] text-slate-400 truncate mt-0.5" x-text="acc.notes"></div>
+            </div>
+            <div class="flex gap-2 flex-shrink-0">
+              <button @click="editAccount(acc)" class="text-blue-600 text-sm font-bold">Edit</button>
+              <button @click="deleteAccount(acc.id)" class="text-rose-500 text-sm font-bold">Delete</button>
+            </div>
+          </div>
+        </template>
+        <div x-show="accounts.length === 0" class="empty-state">
+          <div class="empty-state-icon">🏦</div>
+          No accounts yet. Add one above.
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button @click="closeAccountsModal()" class="btn-primary">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TRANSFER MODAL (NEW) ============ -->
+<div x-show="showTransferModal" class="modal-backdrop" x-cloak
+     role="dialog" aria-modal="true" aria-label="Transfer between accounts"
+     @keydown.escape.window="showTransferModal = false"
+     x-trap.inert.noscroll="showTransferModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 class="text-xl font-bold">🔁 Transfer Between Accounts</h3>
+      <button @click="showTransferModal = false" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body space-y-3">
+      <div class="grid grid-cols-1 gap-2">
+        <div>
+          <label class="text-sm font-bold">From</label>
+          <select x-model="transferForm.fromAccountId" class="input-field">
+            <option value="">— Select account —</option>
+            <template x-for="acc in accounts" :key="'f-'+acc.id">
+              <option :value="acc.id" x-text="acc.name + ' (' + formatCurrency(accountBalance(acc.id)) + ')'"></option>
+            </template>
+          </select>
+        </div>
+        <div class="text-center text-slate-400 text-2xl">↓</div>
+        <div>
+          <label class="text-sm font-bold">To</label>
+          <select x-model="transferForm.toAccountId" class="input-field">
+            <option value="">— Select account —</option>
+            <template x-for="acc in accounts" :key="'t-'+acc.id">
+              <option :value="acc.id" x-text="acc.name + ' (' + formatCurrency(accountBalance(acc.id)) + ')'"></option>
+            </template>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-sm font-bold">Amount (₹)</label>
+        <input type="number" x-model.number="transferForm.amount" class="input-field" step="0.01" min="0.01">
+      </div>
+      <div>
+        <label class="text-sm font-bold">Date</label>
+        <input type="date" x-model="transferForm.date" class="input-field">
+      </div>
+      <div>
+        <label class="text-sm font-bold">Notes (Optional)</label>
+        <input type="text" x-model="transferForm.notes" class="input-field" maxlength="80" placeholder="Reference...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button @click="processTransfer()" class="btn-primary">Transfer</button>
+      <button @click="showTransferModal = false" class="btn-secondary">Cancel</button>
     </div>
   </div>
 </div>
@@ -361,18 +484,20 @@
   </div>
 </div>
 
-<!-- ============ OPENING BALANCES MODAL ============ -->
+<!-- ============ OPENING BALANCES MODAL (Cash & Investment only — bank now per account) ============ -->
 <div x-show="showOpeningBalanceModal" class="modal-backdrop" x-cloak
      role="dialog" aria-modal="true" aria-label="Opening balances"
      @keydown.escape.window="showOpeningBalanceModal = false"
      x-trap.inert.noscroll="showOpeningBalanceModal">
   <div class="modal-panel">
     <div class="modal-header">
-      <h3 class="text-xl font-bold">🏦 Opening Balances</h3>
+      <h3 class="text-xl font-bold">🏁 Opening Balances</h3>
       <button @click="showOpeningBalanceModal = false" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body space-y-4">
-      <div><label class="text-sm font-bold">🏧 Bank (₹)</label><input type="number" x-model.number="openingBalances.bank" class="input-field"></div>
+      <p class="text-xs text-slate-500 bg-slate-50 dark:bg-slate-700/50 p-2 rounded-lg">
+        ℹ️ Bank balances are set per account — open <b>🏦 Accounts</b> to manage them.
+      </p>
       <div><label class="text-sm font-bold">💵 Cash (₹)</label><input type="number" x-model.number="openingBalances.cash" class="input-field"></div>
       <div><label class="text-sm font-bold">📈 Investment (₹)</label><input type="number" x-model.number="openingBalances.investment" class="input-field"></div>
     </div>
@@ -409,6 +534,14 @@
         <select x-model="recurringForm.method" class="input-field">
           <option value="bank">🏦 Bank</option>
           <option value="cash">💵 Cash</option>
+        </select>
+      </div>
+      <div x-show="recurringForm.method === 'bank'">
+        <label class="text-sm font-bold">Account</label>
+        <select x-model="recurringForm.accountId" class="input-field">
+          <template x-for="acc in accounts" :key="'ra-'+acc.id">
+            <option :value="acc.id" x-text="acc.name"></option>
+          </template>
         </select>
       </div>
       <div>
@@ -462,6 +595,14 @@
           <option value="cash">💵 Cash</option>
         </select>
       </div>
+      <div x-show="settleForm.method === 'bank'">
+        <label class="text-sm font-bold">Account</label>
+        <select x-model="settleForm.accountId" class="input-field">
+          <template x-for="acc in accounts" :key="'sa-'+acc.id">
+            <option :value="acc.id" x-text="acc.name"></option>
+          </template>
+        </select>
+      </div>
       <div><label class="text-sm font-bold">Notes (Optional)</label><input type="text" x-model="settleForm.notes" class="input-field" placeholder="Reference..."></div>
     </div>
     <div class="modal-footer">
@@ -483,7 +624,7 @@
     </div>
     <div class="modal-body space-y-3">
       <p class="text-sm text-slate-600 dark:text-slate-300">
-        This will permanently delete all transactions, balances, recurring items and categories for <b x-text="user?.username"></b>.
+        This will permanently delete all transactions, accounts, balances, recurring items and categories for <b x-text="user?.username"></b>.
       </p>
       <label class="flex items-center gap-2 text-sm">
         <input type="checkbox" x-model="resetConfirm"> I understand this cannot be undone
@@ -515,6 +656,7 @@
       <div class="flex justify-between"><span>Reports</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">4</kbd></div>
       <div class="flex justify-between"><span>Recurring</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">5</kbd></div>
       <div class="flex justify-between"><span>Insights</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">6</kbd></div>
+      <div class="flex justify-between"><span>Accounts</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">7</kbd></div>
       <div class="flex justify-between"><span>Focus search</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">/</kbd></div>
       <div class="flex justify-between"><span>Close modal</span><kbd class="bg-slate-100 dark:bg-slate-700 px-2 rounded">Esc</kbd></div>
     </div>
@@ -573,7 +715,6 @@
   <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg overflow-hidden">
     <!-- Header -->
     <div class="p-4 border-b dark:border-slate-700">
-      <!-- Row 1: title + greeting -->
       <div class="flex justify-between items-start gap-2 mb-3">
         <div class="min-w-0 flex-1">
           <h1 class="text-xl sm:text-2xl font-black bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent leading-tight">
@@ -587,7 +728,6 @@
         <div x-show="isSyncing" class="spinner w-4 h-4 flex-shrink-0 mt-2" role="status" aria-label="Syncing"></div>
       </div>
 
-      <!-- Row 2: action buttons -->
       <div class="flex items-center gap-2 flex-wrap">
         <button id="pwaInstallButton" hidden
                 class="bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold">⬇ Install</button>
@@ -602,6 +742,17 @@
         <button @click="showShortcuts = true"
                 class="bg-slate-100 dark:bg-slate-700 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
                 aria-label="Keyboard shortcuts">⌨️</button>
+
+        <button @click="openAccountsModal()"
+                class="bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 flex items-center gap-1">
+          🏦 <span class="hidden sm:inline">Accounts</span>
+        </button>
+
+        <button @click="showTransferModal = true"
+                x-show="accounts.length >= 2"
+                class="bg-cyan-50 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 flex items-center gap-1">
+          🔁 <span class="hidden sm:inline">Transfer</span>
+        </button>
 
         <button @click="showOpeningBalanceModal = true"
                 class="bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 flex items-center gap-1">
@@ -620,6 +771,8 @@
           <div x-show="dropdownOpen" @click.away="dropdownOpen = false"
                @keydown.escape.window="dropdownOpen = false"
                class="dropdown-menu" role="menu">
+            <div class="dropdown-item" @click="openAccountsModal(); dropdownOpen=false" role="menuitem">🏦 Manage Accounts</div>
+            <div class="dropdown-item" @click="showTransferModal=true; dropdownOpen=false" role="menuitem" x-show="accounts.length >= 2">🔁 Transfer</div>
             <div class="dropdown-item" @click="exportData(); dropdownOpen=false" role="menuitem">💾 Backup (JSON)</div>
             <div class="dropdown-item" @click="triggerImport(); dropdownOpen=false" role="menuitem">📂 Import JSON</div>
             <label class="dropdown-item cursor-pointer" role="menuitem">📎 Import Excel<input type="file" class="hidden" accept=".xlsx,.xls,.csv" @change="importFromExcel"></label>
@@ -662,17 +815,29 @@
 
     <!-- ============ DASHBOARD ============ -->
     <div x-show="activeTab === 'dashboard'" class="p-4 space-y-5" x-cloak>
+      <!-- Accounts overview -->
       <div class="bg-gradient-to-r from-cyan-600 to-blue-700 text-white p-4 rounded-2xl">
-        <div class="flex justify-between flex-wrap gap-2">
-          <div class="min-w-0 flex-1">
-            <p class="text-[10px] uppercase opacity-80">Opening Balances</p>
-            <div class="flex gap-x-4 gap-y-1 mt-1 text-sm flex-wrap">
-              <span>🏦 Bank: <b x-text="formatCurrency(openingBalances.bank)"></b></span>
-              <span>💵 Cash: <b x-text="formatCurrency(openingBalances.cash)"></b></span>
-              <span>📈 Investment: <b x-text="formatCurrency(openingBalances.investment)"></b></span>
-            </div>
+        <div class="flex justify-between items-start gap-2 mb-3">
+          <div>
+            <p class="text-[10px] uppercase opacity-80">Bank Accounts ({{ accounts.length }})</p>
+            <p class="text-2xl font-black" x-text="formatCurrency(totals.bank)"></p>
           </div>
-          <button @click="showOpeningBalanceModal = true" class="text-[10px] bg-white/20 px-3 py-1 rounded-full self-start">Edit</button>
+          <button @click="openAccountsModal()" class="text-[10px] bg-white/20 px-3 py-1 rounded-full flex-shrink-0">Manage</button>
+        </div>
+        <div class="space-y-1.5">
+          <template x-for="acc in accounts" :key="'ov-'+acc.id">
+            <div class="flex justify-between items-center text-xs gap-2">
+              <span class="truncate opacity-90" x-text="'• ' + acc.name"></span>
+              <span class="font-bold whitespace-nowrap" x-text="formatCurrency(accountBalance(acc.id))"></span>
+            </div>
+          </template>
+          <div x-show="accounts.length === 0" class="text-xs opacity-80 italic">
+            No accounts yet — <button @click="openAccountsModal()" class="underline font-bold">add one</button>
+          </div>
+        </div>
+        <div class="flex gap-x-4 gap-y-1 mt-3 pt-3 border-t border-white/20 text-xs flex-wrap">
+          <span>💵 Cash: <b x-text="formatCurrency(openingBalances.cash)"></b></span>
+          <span>📈 Investment: <b x-text="formatCurrency(openingBalances.investment)"></b></span>
         </div>
       </div>
 
@@ -691,22 +856,22 @@
           <span class="text-[10px] opacity-70">Click for details →</span>
         </div>
         <div class="bg-blue-600 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('bank')">
-          <small class="text-[11px]">🏦 Bank Balance</small>
+          <small class="text-[11px]">🏦 Total Bank</small>
           <h3 class="text-lg sm:text-xl font-bold" x-text="formatCurrency(totals.bank)"></h3>
           <span class="text-[9px] opacity-70">Tap for bank statement</span>
         </div>
         <div class="bg-emerald-600 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('cash')">
-          <small class="text-[11px]">💵 Cash Balance</small>
+          <small class="text-[11px]">💵 Cash</small>
           <h3 class="text-lg sm:text-xl font-bold" x-text="formatCurrency(totals.cash)"></h3>
           <span class="text-[9px] opacity-70">Tap for cash statement</span>
         </div>
         <div class="bg-amber-500 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('receivable')">
-          <small class="text-[11px]">💰 Receivable (Lent)</small>
+          <small class="text-[11px]">💰 Receivable</small>
           <h3 class="text-lg sm:text-xl font-bold" x-text="formatCurrency(totals.lent)"></h3>
           <span class="text-[9px] opacity-70">Tap for pending lent</span>
         </div>
         <div class="bg-purple-600 text-white p-4 rounded-xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('payable')">
-          <small class="text-[11px]">📋 Payable (Borrowed)</small>
+          <small class="text-[11px]">📋 Payable</small>
           <h3 class="text-lg sm:text-xl font-bold" x-text="formatCurrency(totals.debt)"></h3>
           <span class="text-[9px] opacity-70">Tap for pending borrowed</span>
         </div>
@@ -731,6 +896,15 @@
           <select x-model="form.method" class="input-field">
             <option value="bank">🏦 Bank</option>
             <option value="cash">💵 Cash</option>
+          </select>
+        </div>
+        <!-- Account selector (bank only) -->
+        <div x-show="form.method === 'bank'" class="mb-2">
+          <select x-model="form.accountId" class="input-field">
+            <option value="">— Select bank account —</option>
+            <template x-for="acc in accounts" :key="'fa-'+acc.id">
+              <option :value="acc.id" x-text="acc.name + ' • ' + formatCurrency(accountBalance(acc.id))"></option>
+            </template>
           </select>
         </div>
         <input type="date" x-model="form.date" class="input-field mb-2">
@@ -785,13 +959,21 @@
         <div class="p-3 flex gap-2 flex-wrap">
           <input type="text" id="ledgerSearchInput" x-model="ledgerSearch" @input="debouncedLedgerSearch()" placeholder="Search..." class="input-field flex-1 min-w-[120px]">
           <select x-model="ledgerTypeFilter" @change="refreshLedger()" class="input-field w-auto">
-            <option value="all">All</option>
+            <option value="all">All Types</option>
             <option value="income">Income</option>
             <option value="expense">Expense</option>
             <option value="lent">Lent</option>
             <option value="borrowed">Borrowed</option>
             <option value="settlement">Settlement</option>
             <option value="investment">Investment</option>
+            <option value="transfer">Transfer</option>
+          </select>
+          <select x-model="ledgerAccountFilter" @change="refreshLedger()" class="input-field w-auto">
+            <option value="all">All Accounts</option>
+            <option value="__cash__">💵 Cash</option>
+            <template x-for="acc in accounts" :key="'lf-'+acc.id">
+              <option :value="acc.id" x-text="'🏦 ' + acc.name"></option>
+            </template>
           </select>
           <select x-model="ledgerSort" @change="refreshLedger()" class="input-field w-auto">
             <option value="date-desc">Date ↓</option>
@@ -818,6 +1000,9 @@
                   <td class="p-2 font-medium text-sm">
                     <span x-text="(t.desc || '').slice(0,24)"></span>
                     <span x-show="t.recurringParentId" class="recurring-badge">🔄</span>
+                    <div class="mt-0.5" x-show="t.method === 'bank' && t.accountId">
+                      <span class="acct-chip"><span class="dot"></span><span x-text="accountName(t.accountId)"></span></span>
+                    </div>
                   </td>
                   <td class="p-2">
                     <span :class="'type-badge type-'+t.type" x-text="t.type"></span>
@@ -826,7 +1011,7 @@
                     </span>
                   </td>
                   <td class="p-2 text-right font-bold whitespace-nowrap"
-                      :class="{'text-emerald-600':t.type==='income' || (t.type==='settlement' && t.settlementFor==='lent'),'text-rose-600':t.type==='expense' || (t.type==='settlement' && t.settlementFor==='borrowed')}"
+                      :class="{'text-emerald-600':t.type==='income' || (t.type==='settlement' && t.settlementFor==='lent'),'text-rose-600':t.type==='expense' || (t.type==='settlement' && t.settlementFor==='borrowed'),'text-cyan-600':t.type==='transfer'}"
                       x-text="formatCurrency(t.amt, 2)"></td>
                   <td class="p-2">
                     <div class="action-btn-group">
@@ -868,6 +1053,14 @@
           <option value="borrowed">Borrowed</option>
           <option value="settlement">Settlement</option>
           <option value="investment">Investment</option>
+          <option value="transfer">Transfer</option>
+        </select>
+        <select x-model="transactionAccountFilter" @change="refreshFilteredTxs()" class="input-field w-auto">
+          <option value="all">All Accounts</option>
+          <option value="__cash__">💵 Cash</option>
+          <template x-for="acc in accounts" :key="'tf-'+acc.id">
+            <option :value="acc.id" x-text="'🏦 ' + acc.name"></option>
+          </template>
         </select>
         <input type="text" id="txSearchInput" x-model="search" @input="handleSearchDebounced()" placeholder="Search..." class="input-field flex-1 min-w-[120px]">
       </div>
@@ -878,9 +1071,12 @@
               <div class="min-w-0 flex-1">
                 <div class="font-bold text-sm truncate" x-text="t.desc"></div>
                 <div class="text-xs text-slate-500 truncate" x-text="formatDisplayDate(t.date)+' • '+t.method + (t.category ? ' • ' + t.category : '')"></div>
+                <div class="mt-1" x-show="t.method === 'bank' && t.accountId">
+                  <span class="acct-chip"><span class="dot"></span><span x-text="accountName(t.accountId)"></span></span>
+                </div>
               </div>
               <div class="font-bold whitespace-nowrap"
-                   :class="{'text-emerald-600':t.type==='income' || (t.type==='settlement' && t.settlementFor==='lent'),'text-rose-600':t.type==='expense' || (t.type==='settlement' && t.settlementFor==='borrowed')}"
+                   :class="{'text-emerald-600':t.type==='income' || (t.type==='settlement' && t.settlementFor==='lent'),'text-rose-600':t.type==='expense' || (t.type==='settlement' && t.settlementFor==='borrowed'),'text-cyan-600':t.type==='transfer'}"
                    x-text="formatCurrency(t.amt, 2)"></div>
             </div>
             <div class="flex justify-between items-center mt-2">
@@ -930,6 +1126,22 @@
           <p class="font-bold text-indigo-600 dark:text-indigo-300 break-words" x-text="formatCurrency(reportStats.totalIncome - reportStats.totalExpense)"></p>
         </div>
       </div>
+
+      <!-- Per-account breakdown -->
+      <div class="mt-4 bg-white dark:bg-slate-800 rounded-xl p-4">
+        <h3 class="font-bold mb-3 text-sm">🏦 Account Breakdown</h3>
+        <template x-for="acc in accounts" :key="'rb-'+acc.id">
+          <div class="mb-2 pb-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
+            <div class="flex justify-between items-center gap-2">
+              <span class="acct-chip"><span class="dot"></span><span x-text="acc.name"></span></span>
+              <span class="font-bold text-sm" x-text="formatCurrency(accountBalance(acc.id))"></span>
+            </div>
+            <div class="text-[10px] text-slate-500 mt-1"
+                 x-text="'Opening: ' + formatCurrency(acc.openingBalance) + ' • Txns: ' + accountTxCount(acc.id)"></div>
+          </div>
+        </template>
+        <div x-show="accounts.length === 0" class="text-xs text-slate-400 text-center py-3">No bank accounts</div>
+      </div>
     </div>
 
     <!-- ============ RECURRING ============ -->
@@ -942,6 +1154,9 @@
               <div class="font-bold text-sm truncate" x-text="rt.desc"></div>
               <div class="text-xs text-slate-500 break-words"
                    x-text="formatCurrency(rt.amt) + ' • ' + rt.type + ' • ' + rt.frequency + ' • Next: ' + formatDisplayDate(rt.nextDueDate) + (rt.active === false ? ' • ⏸ Inactive' : '')"></div>
+              <div class="mt-1" x-show="rt.method === 'bank' && rt.accountId">
+                <span class="acct-chip"><span class="dot"></span><span x-text="accountName(rt.accountId)"></span></span>
+              </div>
             </div>
             <div class="flex gap-2 flex-shrink-0">
               <button @click="openRecurringModal(rt)" class="text-blue-600 text-sm font-bold">Edit</button>
@@ -989,7 +1204,7 @@
 
 <script>
 // ============================================================
-// ✅ QW6: Central configuration
+// CONFIG
 // ============================================================
 const CONFIG = {
   IDLE_LOCK_MS: 30 * 60 * 1000,
@@ -1003,11 +1218,12 @@ const CONFIG = {
   TOAST_DURATION: { success: 2500, info: 3000, warning: 4000, error: 5000, default: 3000 },
   UNDO_DURATION_MS: 5000,
   LOCALE: 'en-IN',
-  CURRENCY: 'INR'
+  CURRENCY: 'INR',
+  DATA_VERSION: 3
 };
 
 // ============================================================
-// ✅ QW5: Single source of truth for tabs
+// TABS
 // ============================================================
 const TABS = [
   { id: 'dashboard',    icon: '📊', label: 'Dashboard',    mobileLabel: 'Home' },
@@ -1045,6 +1261,8 @@ function budgetApp() {
     showExportModal: false,
     showOpeningBalanceModal: false,
     showResetDataModal: false,
+    showAccountsModal: false,
+    showTransferModal: false,
     resetConfirm: false,
     showDetailModal: false,
     detailModalTitle: '',
@@ -1067,7 +1285,8 @@ function budgetApp() {
     undoToast: { show: false, message: '', _deleted: null, _timer: null },
 
     // ===== Data =====
-    openingBalances: { bank: 0, cash: 0, investment: 0 },
+    accounts: [],                       // NEW: list of bank accounts
+    openingBalances: { cash: 0, investment: 0 },  // bank moved into accounts
     txs: [],
     recurringTransactions: [],
     customCategories: [],
@@ -1075,11 +1294,19 @@ function budgetApp() {
     filteredCategories: [],
     budgetLimits: { monthly: 50000 },
 
+    // ===== Account form =====
+    accountForm: { id: null, name: '', type: 'savings', openingBalance: 0, notes: '' },
+
+    // ===== Transfer form =====
+    transferForm: { fromAccountId: '', toAccountId: '', amount: 0, date: new Date().toISOString().split('T')[0], notes: '' },
+
     // ===== Filters / paging =====
     search: '',
     transactionTypeFilter: 'all',
+    transactionAccountFilter: 'all',        // NEW
     ledgerSearch: '',
     ledgerTypeFilter: 'all',
+    ledgerAccountFilter: 'all',             // NEW
     ledgerSort: 'date-desc',
     ledgerCurrentPage: 1,
     ledgerPageSize: CONFIG.PAGE_SIZE,
@@ -1090,6 +1317,7 @@ function budgetApp() {
     // ===== Form =====
     form: {
       id: null, type: 'expense', method: 'bank',
+      accountId: '',
       date: new Date().toISOString().split('T')[0],
       desc: '', amt: '', category: '',
       makeRecurring: false,
@@ -1101,6 +1329,7 @@ function budgetApp() {
     // ===== Recurring form =====
     recurringForm: {
       id: null, type: 'expense', method: 'bank',
+      accountId: '',
       frequency: 'monthly',
       nextDueDate: new Date().toISOString().split('T')[0],
       endDate: '', active: true, amt: 1000, desc: 'Recurring Payment', category: 'Other'
@@ -1109,7 +1338,7 @@ function budgetApp() {
     // ===== Settle form =====
     settleForm: {
       transactionId: null, originalDesc: '', originalAmount: 0, remainingAmount: 0,
-      amount: 0, date: new Date().toISOString().split('T')[0], method: 'bank', notes: ''
+      amount: 0, date: new Date().toISOString().split('T')[0], method: 'bank', accountId: '', notes: ''
     },
 
     // ===== Export =====
@@ -1120,7 +1349,6 @@ function budgetApp() {
     _ledgerCache: [],
     _totalsCache: null,
     _totalsKey: '',
-    // ✅ QW2: revision counter
     _revision: 0,
     ledgerSearchDebounceTimer: null,
     searchDebounceTimer: null,
@@ -1142,7 +1370,6 @@ function budgetApp() {
         window.localStorage.removeItem(t);
         this._storage = window.localStorage;
       } catch (e) {
-        console.warn('localStorage unavailable, using in-memory store:', e.message);
         const mem = new Map();
         this._storage = {
           getItem: k => mem.has(k) ? mem.get(k) : null,
@@ -1170,45 +1397,95 @@ function budgetApp() {
     },
 
     lsGet(key) { try { return this.getStorage().getItem(key); } catch { return null; } },
-    lsSet(key, val) { try { this.getStorage().setItem(key, val); return true; } catch (e) { console.warn('lsSet failed:', e); return false; } },
+    lsSet(key, val) { try { this.getStorage().setItem(key, val); return true; } catch { return false; } },
     lsRemove(key) { try { this.getStorage().removeItem(key); } catch {} },
     ssGet(key) { try { return this.getSessionStorage().getItem(key); } catch { return null; } },
-    ssSet(key, val) { try { this.getSessionStorage().setItem(key, val); return true; } catch (e) { console.warn('ssSet failed:', e); return false; } },
+    ssSet(key, val) { try { this.getSessionStorage().setItem(key, val); return true; } catch { return false; } },
     ssRemove(key) { try { this.getSessionStorage().removeItem(key); } catch {} },
 
     // ============================================================
-    // ✅ QW2: TOTALS — revision-based memoization
+    // ACCOUNTS — helpers
+    // ============================================================
+    accountName(id) {
+      const a = this.accounts.find(x => x.id === id);
+      return a ? a.name : 'Unknown';
+    },
+
+    /**
+     * Compute current balance of an account.
+     * Sums openingBalance + all tx effects on that account.
+     */
+    accountBalance(accountId) {
+      const acc = this.accounts.find(a => a.id === accountId);
+      if (!acc) return 0;
+      let bal = +acc.openingBalance || 0;
+      for (const t of this.txs) {
+        if (t.method !== 'bank' || t.accountId !== accountId) continue;
+        const amt = +t.amt || 0;
+        if (t.type === 'income') bal += amt;
+        else if (t.type === 'expense') bal -= amt;
+        else if (t.type === 'investment') bal -= amt;
+        else if (t.type === 'lent') {
+          const rem = t.settled ? 0 : (t.remainingAmount !== undefined ? t.remainingAmount : amt);
+          bal -= rem;
+        } else if (t.type === 'borrowed') {
+          const rem = t.settled ? 0 : (t.remainingAmount !== undefined ? t.remainingAmount : amt);
+          bal += rem;
+        } else if (t.type === 'settlement') {
+          if (t.settlementFor === 'lent') bal += amt;
+          if (t.settlementFor === 'borrowed') bal -= amt;
+        }
+        // transfer handled via transferFrom/transferTo
+        else if (t.type === 'transfer') {
+          // paired entries: one is from (debit), one is to (credit)
+          if (t.transferRole === 'from') bal -= amt;
+          else if (t.transferRole === 'to') bal += amt;
+        }
+      }
+      return bal;
+    },
+
+    accountTxCount(accountId) {
+      return this.txs.filter(t => t.method === 'bank' && t.accountId === accountId).length;
+    },
+
+    // ============================================================
+    // TOTALS
     // ============================================================
     get totals() {
       const key = this._revision + '|' + this.txs.length + '|' +
-                  this.openingBalances.bank + '|' + this.openingBalances.cash + '|' + this.openingBalances.investment;
+                  this.openingBalances.cash + '|' + this.openingBalances.investment + '|' +
+                  this.accounts.length + '|' + this.accounts.map(a => a.id + ':' + a.openingBalance).join(',');
       if (this._totalsKey === key && this._totalsCache) return this._totalsCache;
 
-      let b = +this.openingBalances.bank || 0;
+      let bankTotal = 0;
+      for (const acc of this.accounts) bankTotal += this.accountBalance(acc.id);
+
       let c = +this.openingBalances.cash || 0;
       let inv = +this.openingBalances.investment || 0;
       let lent = 0, debt = 0;
 
       for (const t of this.txs) {
         const amt = +t.amt || 0;
-        if (t.type === 'income') { t.method === 'bank' ? b += amt : c += amt; }
-        else if (t.type === 'expense') { t.method === 'bank' ? b -= amt : c -= amt; }
+        if (t.type === 'income') { if (t.method === 'cash') c += amt; }
+        else if (t.type === 'expense') { if (t.method === 'cash') c -= amt; }
         else if (t.type === 'lent') {
           const rem = t.settled ? 0 : (t.remainingAmount !== undefined ? t.remainingAmount : amt);
-          if (rem > 0) { t.method === 'bank' ? b -= rem : c -= rem; lent += rem; }
+          if (rem > 0) { if (t.method === 'cash') c -= rem; lent += rem; }
         }
         else if (t.type === 'borrowed') {
           const rem = t.settled ? 0 : (t.remainingAmount !== undefined ? t.remainingAmount : amt);
-          if (rem > 0) { t.method === 'bank' ? b += rem : c += rem; debt += rem; }
+          if (rem > 0) { if (t.method === 'cash') c += rem; debt += rem; }
         }
-        else if (t.type === 'investment') { t.method === 'bank' ? b -= amt : c -= amt; inv += amt; }
+        else if (t.type === 'investment') { if (t.method === 'cash') c -= amt; inv += amt; }
         else if (t.type === 'settlement') {
-          if (t.settlementFor === 'lent') t.method === 'bank' ? b += amt : c += amt;
-          if (t.settlementFor === 'borrowed') t.method === 'bank' ? b -= amt : c -= amt;
+          if (t.settlementFor === 'lent') { if (t.method === 'cash') c += amt; }
+          if (t.settlementFor === 'borrowed') { if (t.method === 'cash') c -= amt; }
         }
+        // transfer doesn't affect total net worth
       }
       this._totalsKey = key;
-      this._totalsCache = { bank: b, cash: c, lent, debt, investment: inv, netWorth: b + c + inv + lent - debt };
+      this._totalsCache = { bank: bankTotal, cash: c, lent, debt, investment: inv, netWorth: bankTotal + c + inv + lent - debt };
       return this._totalsCache;
     },
 
@@ -1277,7 +1554,6 @@ function budgetApp() {
         this.lsSet('budget_users', JSON.stringify(users));
       }
 
-      // ✅ QW8: prefers-color-scheme fallback
       const savedDark = this.lsGet('darkMode');
       if (savedDark === 'true') this.darkMode = true;
       else if (savedDark === 'false') this.darkMode = false;
@@ -1296,7 +1572,6 @@ function budgetApp() {
         } catch (e) { console.warn('Session restore failed', e); }
       }
 
-      // ✅ QW2: single watcher bumps revision & invalidates totals cache
       this.$watch('txs', () => {
         this._revision++;
         this._totalsCache = null;
@@ -1305,22 +1580,30 @@ function budgetApp() {
         if (this.activeTab === 'reports') this._debouncedRefreshChart();
       });
 
+      this.$watch('accounts', () => {
+        this._revision++;
+        this._totalsCache = null;
+        this._totalsKey = '';
+        this._debouncedSave();
+      });
+
       this.$watch('activeTab', () => {
         if (this.activeTab === 'reports') this._debouncedRefreshChart();
       });
       this.$watch('search', () => this.handleSearchDebounced());
       this.$watch('transactionTypeFilter', () => this.refreshFilteredTxs());
+      this.$watch('transactionAccountFilter', () => this.refreshFilteredTxs());
       this.$watch('ledgerSearch', () => this.debouncedLedgerSearch());
       this.$watch('ledgerTypeFilter', () => this.refreshLedger());
+      this.$watch('ledgerAccountFilter', () => this.refreshLedger());
       this.$watch('ledgerSort', () => this.refreshLedger());
 
-      // ✅ QW1 / QW7: global keyboard — respects modal state
       this._keydownHandler = (e) => {
         if (!this.isLoggedIn) return;
         const inModal = this.confirmModal.show || this.showLockScreen || this.showShortcuts ||
                         this.showCategoryModal || this.showExportModal || this.showOpeningBalanceModal ||
                         this.showRecurringModal || this.showSettleModal || this.showResetDataModal ||
-                        this.showDetailModal;
+                        this.showDetailModal || this.showAccountsModal || this.showTransferModal;
 
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
           if (e.key === 'Escape') e.target.blur();
@@ -1343,6 +1626,7 @@ function budgetApp() {
         if (e.key === '4') this.activeTab = 'reports';
         if (e.key === '5') this.activeTab = 'recurring';
         if (e.key === '6') this.activeTab = 'insights';
+        if (e.key === '7') this.openAccountsModal();
       };
       window.addEventListener('keydown', this._keydownHandler);
 
@@ -1368,10 +1652,7 @@ function budgetApp() {
       } catch (e) { /* fall through */ }
       let h = 0;
       const s = 'budget:v1:' + pw;
-      for (let i = 0; i < s.length; i++) {
-        h = ((h << 5) - h) + s.charCodeAt(i);
-        h |= 0;
-      }
+      for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
       return 'fallback:' + Math.abs(h).toString(16);
     },
 
@@ -1423,6 +1704,7 @@ function budgetApp() {
       this.isLoggedIn = false;
       this.user = null;
       this.txs = [];
+      this.accounts = [];
       this._txsCache = [];
       this._ledgerCache = [];
       this.showToast('Logged out', 'success');
@@ -1464,38 +1746,89 @@ function budgetApp() {
     },
 
     // ============================================================
-    // DATA LOAD / SAVE
+    // DATA LOAD / SAVE (with v2 → v3 migration)
     // ============================================================
     async loadUserData() {
       const key = `budget_data_${this.user.username}`;
       const raw = this.lsGet(key);
+      let parsed = null;
       if (raw) {
-        try {
-          const p = JSON.parse(raw);
-          const data = p.version ? p.data : p;
-          this.txs = Array.isArray(data) ? data : [];
-        } catch { this.txs = []; }
-      } else {
-        this.txs = [];
+        try { parsed = JSON.parse(raw); } catch { parsed = null; }
       }
-      this.txs = this.txs.map(t => this.sanitizeTx(t));
 
-      const ob = this.lsGet(`opening_balances_${this.user.username}`);
-      if (ob) { try { this.openingBalances = JSON.parse(ob); } catch(e){} }
+      const version = parsed?.version || 2;
+      const txArray = parsed ? (parsed.version ? parsed.data : parsed) : [];
+
+      // Load accounts (new)
+      const accRaw = this.lsGet(`accounts_${this.user.username}`);
+      if (accRaw) {
+        try { this.accounts = JSON.parse(accRaw); } catch { this.accounts = []; }
+      } else {
+        this.accounts = [];
+      }
+
+      // Load opening balances (v2 shape: {bank, cash, investment})
+      const obRaw = this.lsGet(`opening_balances_${this.user.username}`);
+      let obLegacy = { bank: 0, cash: 0, investment: 0 };
+      if (obRaw) { try { obLegacy = { ...obLegacy, ...JSON.parse(obRaw) }; } catch {} }
+
+      // Migration: if v2 data and no accounts yet, create a default one from bank opening
+      if (version < CONFIG.DATA_VERSION && this.accounts.length === 0 && (obLegacy.bank > 0 || (Array.isArray(txArray) && txArray.some(t => t.method === 'bank')))) {
+        const defaultAcc = {
+          id: this.uid(),
+          name: 'Main Bank',
+          type: 'savings',
+          openingBalance: +obLegacy.bank || 0,
+          notes: 'Auto-migrated from previous version',
+          createdAt: new Date().toISOString()
+        };
+        this.accounts = [defaultAcc];
+        this.lsSet(`accounts_${this.user.username}`, JSON.stringify(this.accounts));
+        this.showToast('Migrated to multi-account. Created "Main Bank".', 'info');
+      }
+
+      this.openingBalances = {
+        cash: +obLegacy.cash || 0,
+        investment: +obLegacy.investment || 0
+      };
+
+      // Load txs + sanitize
+      this.txs = Array.isArray(txArray) ? txArray.map(t => this.sanitizeTx(t)) : [];
+
+      // Backfill accountId on bank txs that don't have one, using first account
+      const defaultAccId = this.accounts[0]?.id;
+      if (defaultAccId) {
+        let backfilled = 0;
+        this.txs = this.txs.map(t => {
+          if (t.method === 'bank' && !t.accountId && t.type !== 'transfer') {
+            backfilled++;
+            return { ...t, accountId: defaultAccId };
+          }
+          return t;
+        });
+        if (backfilled > 0) console.info(`Backfilled accountId on ${backfilled} legacy bank txns`);
+      }
 
       const rec = this.lsGet(`recurring_${this.user.username}`);
-      if (rec) { try { this.recurringTransactions = JSON.parse(rec); } catch(e){} }
+      if (rec) { try { this.recurringTransactions = JSON.parse(rec); } catch {} }
 
       const cc = this.lsGet(`categories_${this.user.username}`);
       if (cc) {
         try {
           this.customCategories = JSON.parse(cc);
           this.customCategories.forEach(c => { if (!this.categories.includes(c)) this.categories.push(c); });
-        } catch(e){}
+        } catch {}
       }
 
       const limits = this.lsGet(`budget_limits_${this.user.username}`);
-      if (limits) { try { this.budgetLimits = { ...this.budgetLimits, ...JSON.parse(limits) }; } catch(e){} }
+      if (limits) { try { this.budgetLimits = { ...this.budgetLimits, ...JSON.parse(limits) }; } catch {} }
+
+      // Pre-select first account in forms
+      if (this.accounts[0]?.id) {
+        if (!this.form.accountId) this.form.accountId = this.accounts[0].id;
+        if (!this.recurringForm.accountId) this.recurringForm.accountId = this.accounts[0].id;
+        if (!this.settleForm.accountId) this.settleForm.accountId = this.accounts[0].id;
+      }
 
       this._revision++;
       this.refreshFilteredTxs();
@@ -1507,6 +1840,7 @@ function budgetApp() {
         id: t.id || this.uid(),
         type: t.type || 'expense',
         method: t.method || 'bank',
+        accountId: t.accountId || null,
         date: t.date || new Date().toISOString().split('T')[0],
         desc: String(t.desc || '').slice(0, 200),
         amt: Number(t.amt) || 0,
@@ -1517,7 +1851,11 @@ function budgetApp() {
         settlementFor: t.settlementFor,
         originalTxId: t.originalTxId,
         recurringParentId: t.recurringParentId,
-        notes: t.notes
+        notes: t.notes,
+        // transfer fields
+        transferId: t.transferId,
+        transferRole: t.transferRole,
+        transferPairId: t.transferPairId
       };
       if ((out.type === 'lent' || out.type === 'borrowed') && out.remainingAmount === undefined && !out.settled) {
         out.remainingAmount = out.amt;
@@ -1529,7 +1867,9 @@ function budgetApp() {
     save() {
       if (!this.user) return;
       try {
-        this.lsSet(`budget_data_${this.user.username}`, JSON.stringify({ version: 2, data: this.txs }));
+        this.lsSet(`budget_data_${this.user.username}`, JSON.stringify({ version: CONFIG.DATA_VERSION, data: this.txs }));
+        this.lsSet(`accounts_${this.user.username}`, JSON.stringify(this.accounts));
+        this.lsSet(`opening_balances_${this.user.username}`, JSON.stringify(this.openingBalances));
         this.lsSet(`budget_limits_${this.user.username}`, JSON.stringify(this.budgetLimits));
       } catch (e) {
         console.error('Save failed', e);
@@ -1547,13 +1887,14 @@ function budgetApp() {
     resetAllData() {
       if (!this.resetConfirm) return;
       const u = this.user.username;
-      ['budget_data_', 'opening_balances_', 'recurring_', 'categories_', 'budget_limits_'].forEach(p => {
+      ['budget_data_', 'opening_balances_', 'recurring_', 'categories_', 'budget_limits_', 'accounts_'].forEach(p => {
         this.lsRemove(p + u);
       });
       this.txs = [];
+      this.accounts = [];
       this.recurringTransactions = [];
       this.customCategories = [];
-      this.openingBalances = { bank: 0, cash: 0, investment: 0 };
+      this.openingBalances = { cash: 0, investment: 0 };
       this._txsCache = [];
       this._ledgerCache = [];
       this._totalsCache = null;
@@ -1562,9 +1903,149 @@ function budgetApp() {
       this.currentPage = 1;
       this.ledgerCurrentPage = 1;
       this.resetForm();
+      this.resetAccountForm();
       this.showResetDataModal = false;
       this.resetConfirm = false;
       this.showToast('All data reset', 'success');
+    },
+
+    // ============================================================
+    // ACCOUNTS — CRUD
+    // ============================================================
+    openAccountsModal() {
+      this.resetAccountForm();
+      this.showAccountsModal = true;
+    },
+
+    closeAccountsModal() {
+      this.showAccountsModal = false;
+      this.resetAccountForm();
+    },
+
+    resetAccountForm() {
+      this.accountForm = { id: null, name: '', type: 'savings', openingBalance: 0, notes: '' };
+    },
+
+    editAccount(acc) {
+      this.accountForm = { id: acc.id, name: acc.name, type: acc.type || 'savings', openingBalance: +acc.openingBalance || 0, notes: acc.notes || '' };
+    },
+
+    saveAccount() {
+      const f = this.accountForm;
+      const name = (f.name || '').trim();
+      if (!name) { this.showToast('Account name required', 'error'); return; }
+      if (name.length > 40) { this.showToast('Name too long (max 40)', 'error'); return; }
+
+      if (f.id) {
+        // Prevent duplicate names
+        if (this.accounts.some(a => a.id !== f.id && a.name.toLowerCase() === name.toLowerCase())) {
+          this.showToast('Account name already exists', 'error'); return;
+        }
+        this.accounts = this.accounts.map(a => a.id === f.id
+          ? { ...a, name, type: f.type, openingBalance: +f.openingBalance || 0, notes: (f.notes || '').trim() }
+          : a);
+        this.showToast('Account updated', 'success');
+      } else {
+        if (this.accounts.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+          this.showToast('Account name already exists', 'error'); return;
+        }
+        const newAcc = {
+          id: this.uid(),
+          name,
+          type: f.type,
+          openingBalance: +f.openingBalance || 0,
+          notes: (f.notes || '').trim(),
+          createdAt: new Date().toISOString()
+        };
+        this.accounts = [...this.accounts, newAcc];
+        // Auto-select for new transactions
+        if (!this.form.accountId) this.form.accountId = newAcc.id;
+        if (!this.recurringForm.accountId) this.recurringForm.accountId = newAcc.id;
+        this.showToast('Account added', 'success');
+      }
+      this.resetAccountForm();
+    },
+
+    deleteAccount(id) {
+      const acc = this.accounts.find(a => a.id === id);
+      if (!acc) return;
+      const txCount = this.accountTxCount(id);
+      const balance = this.accountBalance(id);
+      const msg = txCount > 0
+        ? `"${acc.name}" has ${txCount} transactions and current balance ${this.formatCurrency(balance)}. Deleting will unassign those transactions (they'll keep their amounts but show no account). Continue?`
+        : `Delete "${acc.name}"?`;
+      this.showConfirm('Delete Account', msg, () => {
+        this.accounts = this.accounts.filter(a => a.id !== id);
+        // Unassign accountId from affected txs
+        this.txs = this.txs.map(t => t.accountId === id ? { ...t, accountId: null } : t);
+        // Clear forms if pointing to deleted account
+        if (this.form.accountId === id) this.form.accountId = this.accounts[0]?.id || '';
+        if (this.recurringForm.accountId === id) this.recurringForm.accountId = this.accounts[0]?.id || '';
+        if (this.settleForm.accountId === id) this.settleForm.accountId = this.accounts[0]?.id || '';
+        this.refreshFilteredTxs();
+        this.refreshLedger();
+        this.showToast('Account deleted', 'success');
+      });
+    },
+
+    // ============================================================
+    // TRANSFERS
+    // ============================================================
+    processTransfer() {
+      const f = this.transferForm;
+      if (!f.fromAccountId || !f.toAccountId) { this.showToast('Select both accounts', 'error'); return; }
+      if (f.fromAccountId === f.toAccountId) { this.showToast('From and To must differ', 'error'); return; }
+      const amt = Number(f.amount);
+      if (!amt || amt <= 0) { this.showToast('Amount must be > 0', 'error'); return; }
+      if (amt > this.accountBalance(f.fromAccountId) + CONFIG.AMOUNT_EPSILON) {
+        // Still allow but warn
+        this.showToast('Warning: amount exceeds source balance', 'warning');
+      }
+
+      const transferId = this.uid();
+      const fromAcc = this.accounts.find(a => a.id === f.fromAccountId);
+      const toAcc = this.accounts.find(a => a.id === f.toAccountId);
+      const notes = (f.notes || '').trim();
+      const suffix = notes ? ` (${notes})` : '';
+
+      const fromTx = {
+        id: this.uid(),
+        type: 'transfer',
+        method: 'bank',
+        accountId: f.fromAccountId,
+        date: f.date,
+        desc: `Transfer → ${toAcc.name}${suffix}`,
+        amt,
+        category: 'Transfer',
+        settled: true,
+        settledAmount: 0,
+        transferId,
+        transferRole: 'from'
+      };
+      const toTxId = this.uid();
+      const toTx = {
+        id: toTxId,
+        type: 'transfer',
+        method: 'bank',
+        accountId: f.toAccountId,
+        date: f.date,
+        desc: `Transfer ← ${fromAcc.name}${suffix}`,
+        amt,
+        category: 'Transfer',
+        settled: true,
+        settledAmount: 0,
+        transferId,
+        transferRole: 'to'
+      };
+      fromTx.transferPairId = toTxId;
+      toTx.transferPairId = fromTx.id;
+
+      this.txs = [...this.txs, fromTx, toTx];
+      this.refreshFilteredTxs();
+      this.refreshLedger();
+      this.showTransferModal = false;
+      this.transferForm = { fromAccountId: '', toAccountId: '', amount: 0, date: new Date().toISOString().split('T')[0], notes: '' };
+      this.showToast(`Transferred ${this.formatCurrency(amt, 2)}`, 'success');
     },
 
     // ============================================================
@@ -1579,6 +2060,15 @@ function budgetApp() {
       if (!this.form.desc || !this.form.desc.trim()) { this.showToast('Description required', 'error'); return false; }
       if (!this.form.amt || Number(this.form.amt) <= 0) { this.showToast('Amount must be > 0', 'error'); return false; }
       if (!this.form.date) { this.showToast('Date required', 'error'); return false; }
+      if (this.form.method === 'bank' && !this.form.accountId) {
+        if (this.accounts.length === 0) {
+          this.showToast('Add a bank account first (🏦 Accounts)', 'error');
+          this.openAccountsModal();
+          return false;
+        }
+        this.showToast('Select a bank account', 'error');
+        return false;
+      }
       return true;
     },
 
@@ -1591,6 +2081,7 @@ function budgetApp() {
         id: this.form.id || this.uid(),
         type: this.form.type,
         method: this.form.method,
+        accountId: this.form.method === 'bank' ? this.form.accountId : null,
         date: this.form.date,
         desc: String(this.form.desc).trim(),
         amt,
@@ -1616,7 +2107,7 @@ function budgetApp() {
         if (this.form.makeRecurring) {
           this.recurringTransactions.push({
             id: this.uid(), desc: newTx.desc, amt: newTx.amt, type: newTx.type,
-            method: newTx.method, category: newTx.category,
+            method: newTx.method, accountId: newTx.accountId, category: newTx.category,
             frequency: this.form.recurringFrequency,
             nextDueDate: this.form.recurringNextDate,
             endDate: this.form.recurringEndDate || '',
@@ -1635,6 +2126,7 @@ function budgetApp() {
       const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth() + 1);
       this.form = {
         id: null, type: 'expense', method: 'bank',
+        accountId: this.accounts[0]?.id || '',
         date: new Date().toISOString().split('T')[0],
         desc: '', amt: '', category: '',
         makeRecurring: false, recurringFrequency: 'monthly',
@@ -1646,6 +2138,7 @@ function budgetApp() {
     editTx(tx) {
       this.form = {
         ...tx,
+        accountId: tx.accountId || this.accounts[0]?.id || '',
         amt: tx.amt,
         makeRecurring: false,
         recurringFrequency: 'monthly',
@@ -1658,8 +2151,22 @@ function budgetApp() {
     editTxFromLedger(tx) { this.editTx(tx); },
 
     safeDeleteTx(id) {
+      const tx = this.txs.find(t => t.id === id);
+      if (!tx) return;
+
+      // If this is a transfer, delete BOTH legs
+      if (tx.type === 'transfer' && tx.transferPairId) {
+        const idx1 = this.txs.findIndex(t => t.id === tx.id);
+        const idx2 = this.txs.findIndex(t => t.id === tx.transferPairId);
+        const backup = [this.txs[idx1], this.txs[idx2]].filter(Boolean);
+        this.txs = this.txs.filter(t => t.id !== tx.id && t.id !== tx.transferPairId);
+        this.refreshFilteredTxs();
+        this.refreshLedger();
+        this.showUndo(`Deleted transfer (both legs)`, backup, Math.min(idx1, idx2), true);
+        return;
+      }
+
       const idx = this.txs.findIndex(t => t.id === id);
-      if (idx === -1) return;
       const backup = this.txs[idx];
       this.txs = this.txs.filter(t => t.id !== id);
       this.refreshFilteredTxs();
@@ -1667,9 +2174,9 @@ function budgetApp() {
       this.showUndo(`Deleted "${backup.desc.slice(0, 30)}"`, backup, idx);
     },
 
-    showUndo(message, backup, idx) {
+    showUndo(message, backup, idx, isArray = false) {
       if (this.undoToast._timer) clearTimeout(this.undoToast._timer);
-      this.undoToast = { show: true, message, _deleted: { tx: backup, idx }, _timer: null };
+      this.undoToast = { show: true, message, _deleted: { tx: backup, idx, isArray }, _timer: null };
       this.undoToast._timer = setTimeout(() => { this.undoToast.show = false; }, CONFIG.UNDO_DURATION_MS);
     },
 
@@ -1677,7 +2184,11 @@ function budgetApp() {
       const d = this.undoToast._deleted;
       if (!d) return;
       const arr = [...this.txs];
-      arr.splice(d.idx, 0, d.tx);
+      if (d.isArray) {
+        d.tx.slice().reverse().forEach(item => arr.splice(d.idx, 0, item));
+      } else {
+        arr.splice(d.idx, 0, d.tx);
+      }
       this.txs = arr;
       this.refreshFilteredTxs();
       this.refreshLedger();
@@ -1690,7 +2201,6 @@ function budgetApp() {
     // SETTLE
     // ============================================================
     openSettleForm(tx) {
-      // ✅ QW3: only lent/borrowed may be settled
       if (tx.type !== 'lent' && tx.type !== 'borrowed') {
         this.showToast('Only lent/borrowed can be settled', 'error');
         return;
@@ -1705,7 +2215,8 @@ function budgetApp() {
         remainingAmount: rem,
         amount: rem,
         date: new Date().toISOString().split('T')[0],
-        method: 'bank',
+        method: tx.method || 'bank',
+        accountId: tx.accountId || this.accounts[0]?.id || '',
         notes: ''
       };
       this.showSettleModal = true;
@@ -1717,10 +2228,12 @@ function budgetApp() {
       const amt = Number(this.settleForm.amount);
       if (!amt || amt <= 0) { this.showToast('Invalid amount', 'error'); return; }
       if (amt > this.settleForm.remainingAmount + CONFIG.AMOUNT_EPSILON) { this.showToast('Amount exceeds remaining', 'error'); return; }
+      if (this.settleForm.method === 'bank' && !this.settleForm.accountId) {
+        this.showToast('Select bank account', 'error'); return;
+      }
 
       const orig = this.txs.find(t => t.id === this.settleForm.transactionId);
       if (!orig) { this.showToast('Original not found', 'error'); return; }
-      // ✅ QW3: re-validate at processing time
       if (orig.type !== 'lent' && orig.type !== 'borrowed') {
         this.showToast('Invalid transaction type for settlement', 'error');
         return;
@@ -1739,6 +2252,7 @@ function budgetApp() {
         date: this.settleForm.date,
         type: 'settlement',
         method: this.settleForm.method,
+        accountId: this.settleForm.method === 'bank' ? this.settleForm.accountId : null,
         desc: `Settlement${full ? ' (Full)' : ' (Partial)'}: ${orig.desc}`,
         amt,
         category: 'Settlement',
@@ -1791,7 +2305,9 @@ function budgetApp() {
       } else {
         const next = new Date(); next.setDate(next.getDate() + 1);
         this.recurringForm = {
-          id: null, type: 'expense', method: 'bank', frequency: 'monthly',
+          id: null, type: 'expense', method: 'bank',
+          accountId: this.accounts[0]?.id || '',
+          frequency: 'monthly',
           nextDueDate: next.toISOString().split('T')[0],
           endDate: '', active: true, amt: 1000, desc: 'Recurring Payment', category: 'Other'
         };
@@ -1802,6 +2318,7 @@ function budgetApp() {
     addRecurringTransaction() {
       const f = this.recurringForm;
       if (!f.nextDueDate || !f.desc || !f.amt || f.amt <= 0) { this.showToast('Fill all fields', 'error'); return; }
+      if (f.method === 'bank' && !f.accountId) { this.showToast('Select an account', 'error'); return; }
 
       if (f.id) {
         const i = this.recurringTransactions.findIndex(r => r.id === f.id);
@@ -1826,6 +2343,7 @@ function budgetApp() {
     processRecurringTransactions() {
       const today = new Date(); today.setHours(23, 59, 59, 999);
       let added = 0;
+      const defaultAccId = this.accounts[0]?.id || null;
 
       const existing = new Set(
         this.txs.filter(t => t.recurringParentId).map(t => `${t.recurringParentId}|${t.date}`)
@@ -1855,6 +2373,7 @@ function budgetApp() {
               date: dateStr,
               type: rt.type,
               method: rt.method,
+              accountId: rt.method === 'bank' ? (rt.accountId || defaultAccId) : null,
               desc: `[Recurring] ${rt.desc}`,
               amt: rt.amt,
               category: rt.category || 'Other',
@@ -1896,24 +2415,27 @@ function budgetApp() {
       const t = this.totals;
 
       if (type === 'bank') {
-        title = '🏦 Bank Statement (all bank transactions)';
-        transactions = this.txs.filter(x => x.method === 'bank').sort((a, b) => new Date(b.date) - new Date(a.date));
+        title = '🏦 All Bank Transactions';
+        transactions = this.txs
+          .filter(x => x.method === 'bank')
+          .map(x => ({ ...x, accountName: x.accountId ? this.accountName(x.accountId) : '—' }))
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
         total = t.bank;
       } else if (type === 'cash') {
-        title = '💵 Cash Statement (all cash transactions)';
+        title = '💵 Cash Statement';
         transactions = this.txs.filter(x => x.method === 'cash').sort((a, b) => new Date(b.date) - new Date(a.date));
         total = t.cash;
       } else if (type === 'receivable') {
         title = '💰 Receivable (Pending Lent)';
         transactions = this.txs
           .filter(x => x.type === 'lent' && !x.settled && (x.remainingAmount ?? x.amt) > 0)
-          .map(x => ({ ...x, remainingAmount: x.remainingAmount ?? x.amt }));
+          .map(x => ({ ...x, remainingAmount: x.remainingAmount ?? x.amt, accountName: x.accountId ? this.accountName(x.accountId) : (x.method === 'cash' ? 'Cash' : '—') }));
         total = t.lent;
       } else if (type === 'payable') {
         title = '📋 Payable (Pending Borrowed)';
         transactions = this.txs
           .filter(x => x.type === 'borrowed' && !x.settled && (x.remainingAmount ?? x.amt) > 0)
-          .map(x => ({ ...x, remainingAmount: x.remainingAmount ?? x.amt }));
+          .map(x => ({ ...x, remainingAmount: x.remainingAmount ?? x.amt, accountName: x.accountId ? this.accountName(x.accountId) : (x.method === 'cash' ? 'Cash' : '—') }));
         total = t.debt;
       } else if (type === 'investment') {
         title = '📈 Investment History';
@@ -1921,13 +2443,24 @@ function budgetApp() {
         total = t.investment;
       } else if (type === 'networth') {
         title = '💰 Net Worth Breakdown';
-        transactions = [
-          { id: 'nw-b', desc: 'Bank Balance', date: new Date().toISOString().split('T')[0], amt: t.bank, method: '' },
-          { id: 'nw-c', desc: 'Cash Balance', date: new Date().toISOString().split('T')[0], amt: t.cash, method: '' },
-          { id: 'nw-i', desc: 'Investments', date: new Date().toISOString().split('T')[0], amt: t.investment, method: '' },
-          { id: 'nw-l', desc: 'Receivable (Lent)', date: new Date().toISOString().split('T')[0], amt: t.lent, method: '' },
-          { id: 'nw-d', desc: 'Payable (Borrowed)', date: new Date().toISOString().split('T')[0], amt: -t.debt, method: '' }
-        ];
+        const items = [];
+        this.accounts.forEach(acc => {
+          items.push({
+            id: 'nw-acc-' + acc.id,
+            desc: `🏦 ${acc.name}`,
+            date: new Date().toISOString().split('T')[0],
+            amt: this.accountBalance(acc.id),
+            method: 'bank',
+            accountName: acc.name
+          });
+        });
+        items.push(
+          { id: 'nw-c', desc: '💵 Cash', date: new Date().toISOString().split('T')[0], amt: t.cash, method: '' },
+          { id: 'nw-i', desc: '📈 Investments', date: new Date().toISOString().split('T')[0], amt: t.investment, method: '' },
+          { id: 'nw-l', desc: '💰 Receivable (Lent)', date: new Date().toISOString().split('T')[0], amt: t.lent, method: '' },
+          { id: 'nw-d', desc: '📋 Payable (Borrowed)', date: new Date().toISOString().split('T')[0], amt: -t.debt, method: '' }
+        );
+        transactions = items;
         total = t.netWorth;
       }
 
@@ -1940,13 +2473,21 @@ function budgetApp() {
     // ============================================================
     // FILTERS / PAGINATION
     // ============================================================
+    _matchAccountFilter(t, filter) {
+      if (filter === 'all') return true;
+      if (filter === '__cash__') return t.method === 'cash';
+      return t.method === 'bank' && t.accountId === filter;
+    },
+
     refreshFilteredTxs() {
       const q = this.search.toLowerCase().trim();
       const f = this.transactionTypeFilter;
+      const af = this.transactionAccountFilter;
       this._txsCache = this.txs
         .filter(t =>
           (!q || (t.desc && t.desc.toLowerCase().includes(q)) || (t.category && t.category.toLowerCase().includes(q)))
           && (f === 'all' || t.type === f)
+          && this._matchAccountFilter(t, af)
         )
         .sort((a, b) => new Date(b.date) - new Date(a.date));
       this.currentPage = Math.min(this.currentPage, this.totalPages()) || 1;
@@ -1955,9 +2496,11 @@ function budgetApp() {
     refreshLedger() {
       const q = this.ledgerSearch.toLowerCase().trim();
       const f = this.ledgerTypeFilter;
+      const af = this.ledgerAccountFilter;
       let list = this.txs.filter(t =>
         (!q || (t.desc && t.desc.toLowerCase().includes(q)) || (t.category && t.category.toLowerCase().includes(q)))
         && (f === 'all' || t.type === f)
+        && this._matchAccountFilter(t, af)
       );
       const [key, dir] = this.ledgerSort.split('-');
       list.sort((a, b) => {
@@ -2038,8 +2581,13 @@ function budgetApp() {
         .filter(t => (!from || new Date(t.date) >= from) && (!to || new Date(t.date) <= to))
         .sort((a, b) => new Date(b.date) - new Date(a.date))
         .map(t => ({
-          Date: t.date, Description: t.desc, Type: t.type, Method: t.method,
-          Category: t.category, Amount: t.amt,
+          Date: t.date,
+          Description: t.desc,
+          Type: t.type,
+          Method: t.method,
+          Account: t.accountId ? this.accountName(t.accountId) : (t.method === 'cash' ? 'Cash' : ''),
+          Category: t.category,
+          Amount: t.amt,
           Settled: t.settled ? 'Yes' : 'No',
           Remaining: t.remainingAmount ?? ''
         }));
@@ -2072,14 +2620,10 @@ function budgetApp() {
       XLSX.writeFile(wb, `budget_${Date.now()}.xlsx`);
     },
 
-    // ✅ QW4: escape HTML in PDF
     _escapeHtml(v) {
       return String(v ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     },
 
     downloadPDF(data) {
@@ -2107,9 +2651,10 @@ function budgetApp() {
 
     exportData() {
       const payload = {
-        version: 2,
+        version: CONFIG.DATA_VERSION,
         exportedAt: new Date().toISOString(),
         user: this.user?.username,
+        accounts: this.accounts,
         transactions: this.txs,
         openingBalances: this.openingBalances,
         recurringTransactions: this.recurringTransactions,
@@ -2133,8 +2678,9 @@ function budgetApp() {
           if (Array.isArray(imp)) {
             this.txs = imp.map(t => this.sanitizeTx(t));
           } else {
+            if (Array.isArray(imp.accounts)) this.accounts = imp.accounts;
             if (Array.isArray(imp.transactions)) this.txs = imp.transactions.map(t => this.sanitizeTx(t));
-            if (imp.openingBalances) this.openingBalances = { ...this.openingBalances, ...imp.openingBalances };
+            if (imp.openingBalances) this.openingBalances = { cash: 0, investment: 0, ...imp.openingBalances };
             if (Array.isArray(imp.recurringTransactions)) this.recurringTransactions = imp.recurringTransactions;
             if (Array.isArray(imp.customCategories)) {
               this.customCategories = imp.customCategories;
@@ -2145,7 +2691,6 @@ function budgetApp() {
           this.save();
           this.refreshFilteredTxs();
           this.refreshLedger();
-          this.lsSet(`opening_balances_${this.user.username}`, JSON.stringify(this.openingBalances));
           this.lsSet(`recurring_${this.user.username}`, JSON.stringify(this.recurringTransactions));
           this.showToast('Imported successfully', 'success');
         } catch (err) {
@@ -2167,11 +2712,13 @@ function budgetApp() {
           const wb = XLSX.read(ev.target.result, { type: 'array' });
           const ws = wb.Sheets[wb.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          const defaultAccId = this.accounts[0]?.id || null;
           const imported = rows.map(row => this.sanitizeTx({
             date: this._parseExcelDate(row.Date || row.date),
             desc: row.Description || row.desc || '',
             type: (row.Type || row.type || 'expense').toLowerCase(),
             method: (row.Method || row.method || 'bank').toLowerCase(),
+            accountId: defaultAccId,
             category: row.Category || row.category || 'Other',
             amt: Number(row.Amount || row.amt) || 0,
             settled: String(row.Settled || '').toLowerCase() === 'yes'
