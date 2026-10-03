@@ -276,10 +276,9 @@
   </div>
 </div>
 
-<!-- ============ LOCK SCREEN ============ -->
+<!-- ============ LOCK SCREEN (no x-trap — see clearOrphanInert) ============ -->
 <div x-show="showLockScreen" class="modal-backdrop" x-cloak
-     role="dialog" aria-modal="true" aria-label="Session locked"
-     x-trap.inert.noscroll="showLockScreen">
+     role="dialog" aria-modal="true" aria-label="Session locked">
   <div class="modal-panel">
     <div class="modal-body text-center">
       <div class="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/50 rounded-full mx-auto flex items-center justify-center mb-3">
@@ -291,6 +290,7 @@
     <div class="modal-body pt-0 space-y-3">
       <input type="password" x-model="lockPassword" placeholder="Enter password to unlock"
              class="input-field" @keyup.enter="unlockSession()" x-ref="lockInput" autofocus>
+      <p x-show="lockError" class="text-xs text-rose-500 text-center" x-text="lockError"></p>
       <button @click="unlockSession()" class="btn-primary w-full">Unlock Session</button>
       <button @click="logout()" class="btn-secondary w-full">Logout Instead</button>
     </div>
@@ -328,7 +328,7 @@
   </div>
 </div>
 
-<!-- ============ ACCOUNTS MANAGER MODAL (NEW) ============ -->
+<!-- ============ ACCOUNTS MANAGER MODAL ============ -->
 <div x-show="showAccountsModal" class="modal-backdrop" x-cloak
      role="dialog" aria-modal="true" aria-label="Manage bank accounts"
      @keydown.escape.window="closeAccountsModal()"
@@ -339,7 +339,6 @@
       <button @click="closeAccountsModal()" class="text-2xl text-slate-500" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body space-y-3">
-      <!-- Add / Edit form -->
       <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl space-y-2">
         <div class="text-xs font-bold text-indigo-700 dark:text-indigo-300"
              x-text="accountForm.id ? '✏️ Edit Account' : '➕ Add New Account'"></div>
@@ -366,7 +365,6 @@
         </div>
       </div>
 
-      <!-- Accounts list -->
       <div class="space-y-2 max-h-72 overflow-y-auto">
         <template x-for="acc in accounts" :key="acc.id">
           <div class="border dark:border-slate-700 rounded-xl p-3 flex justify-between items-center gap-2">
@@ -397,7 +395,7 @@
   </div>
 </div>
 
-<!-- ============ TRANSFER MODAL (NEW) ============ -->
+<!-- ============ TRANSFER MODAL ============ -->
 <div x-show="showTransferModal" class="modal-backdrop" x-cloak
      role="dialog" aria-modal="true" aria-label="Transfer between accounts"
      @keydown.escape.window="showTransferModal = false"
@@ -484,7 +482,7 @@
   </div>
 </div>
 
-<!-- ============ OPENING BALANCES MODAL (Cash & Investment only — bank now per account) ============ -->
+<!-- ============ OPENING BALANCES MODAL ============ -->
 <div x-show="showOpeningBalanceModal" class="modal-backdrop" x-cloak
      role="dialog" aria-modal="true" aria-label="Opening balances"
      @keydown.escape.window="showOpeningBalanceModal = false"
@@ -785,7 +783,6 @@
       </div>
     </div>
 
-    <!-- Sandbox warning banner -->
     <div x-show="storageNotice" x-cloak class="bg-amber-100 dark:bg-amber-900/40 border-l-4 border-amber-500 p-3 text-sm flex items-center gap-2" role="alert">
       <span>⚠️</span>
       <span><b>Sandbox mode:</b> Local storage is unavailable. Your data will be lost when you close this tab. Open this file directly in a browser to persist.</span>
@@ -815,7 +812,6 @@
 
     <!-- ============ DASHBOARD ============ -->
     <div x-show="activeTab === 'dashboard'" class="p-4 space-y-5" x-cloak>
-      <!-- Accounts overview -->
       <div class="bg-gradient-to-r from-cyan-600 to-blue-700 text-white p-4 rounded-2xl">
         <div class="flex justify-between items-start gap-2 mb-3">
           <div>
@@ -848,7 +844,6 @@
         </div>
       </div>
 
-      <!-- Summary Cards -->
       <div class="grid grid-cols-2 gap-3">
         <div class="col-span-2 bg-gradient-to-r from-indigo-900 to-slate-900 text-white p-5 rounded-2xl cursor-pointer dashboard-card-clickable" @click="showDetailedReport('networth')">
           <small class="text-[11px] uppercase opacity-80">Total Net Worth</small>
@@ -882,7 +877,6 @@
         </div>
       </div>
 
-      <!-- Quick Transaction Form -->
       <div class="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-2xl">
         <p class="text-xs font-bold mb-2" x-text="form.id ? '✏️ Edit Transaction' : '➕ Quick Transaction'"></p>
         <div class="grid grid-cols-2 gap-2 mb-2">
@@ -898,7 +892,6 @@
             <option value="cash">💵 Cash</option>
           </select>
         </div>
-        <!-- Account selector (bank only) -->
         <div x-show="form.method === 'bank'" class="mb-2">
           <select x-model="form.accountId" class="input-field">
             <option value="">— Select bank account —</option>
@@ -1127,7 +1120,6 @@
         </div>
       </div>
 
-      <!-- Per-account breakdown -->
       <div class="mt-4 bg-white dark:bg-slate-800 rounded-xl p-4">
         <h3 class="font-bold mb-3 text-sm">🏦 Account Breakdown</h3>
         <template x-for="acc in accounts" :key="'rb-'+acc.id">
@@ -1253,6 +1245,7 @@ function budgetApp() {
     loadingMessage: '',
     showLockScreen: false,
     lockPassword: '',
+    lockError: '',
     dropdownOpen: false,
     showShortcuts: false,
     showCategoryModal: false,
@@ -1285,8 +1278,8 @@ function budgetApp() {
     undoToast: { show: false, message: '', _deleted: null, _timer: null },
 
     // ===== Data =====
-    accounts: [],                       // NEW: list of bank accounts
-    openingBalances: { cash: 0, investment: 0 },  // bank moved into accounts
+    accounts: [],
+    openingBalances: { cash: 0, investment: 0 },
     txs: [],
     recurringTransactions: [],
     customCategories: [],
@@ -1303,10 +1296,10 @@ function budgetApp() {
     // ===== Filters / paging =====
     search: '',
     transactionTypeFilter: 'all',
-    transactionAccountFilter: 'all',        // NEW
+    transactionAccountFilter: 'all',
     ledgerSearch: '',
     ledgerTypeFilter: 'all',
-    ledgerAccountFilter: 'all',             // NEW
+    ledgerAccountFilter: 'all',
     ledgerSort: 'date-desc',
     ledgerCurrentPage: 1,
     ledgerPageSize: CONFIG.PAGE_SIZE,
@@ -1404,17 +1397,13 @@ function budgetApp() {
     ssRemove(key) { try { this.getSessionStorage().removeItem(key); } catch {} },
 
     // ============================================================
-    // ACCOUNTS — helpers
+    // ACCOUNTS
     // ============================================================
     accountName(id) {
       const a = this.accounts.find(x => x.id === id);
       return a ? a.name : 'Unknown';
     },
 
-    /**
-     * Compute current balance of an account.
-     * Sums openingBalance + all tx effects on that account.
-     */
     accountBalance(accountId) {
       const acc = this.accounts.find(a => a.id === accountId);
       if (!acc) return 0;
@@ -1434,10 +1423,7 @@ function budgetApp() {
         } else if (t.type === 'settlement') {
           if (t.settlementFor === 'lent') bal += amt;
           if (t.settlementFor === 'borrowed') bal -= amt;
-        }
-        // transfer handled via transferFrom/transferTo
-        else if (t.type === 'transfer') {
-          // paired entries: one is from (debit), one is to (credit)
+        } else if (t.type === 'transfer') {
           if (t.transferRole === 'from') bal -= amt;
           else if (t.transferRole === 'to') bal += amt;
         }
@@ -1482,7 +1468,6 @@ function budgetApp() {
           if (t.settlementFor === 'lent') { if (t.method === 'cash') c += amt; }
           if (t.settlementFor === 'borrowed') { if (t.method === 'cash') c -= amt; }
         }
-        // transfer doesn't affect total net worth
       }
       this._totalsKey = key;
       this._totalsCache = { bank: bankTotal, cash: c, lent, debt, investment: inv, netWorth: bankTotal + c + inv + lent - debt };
@@ -1598,6 +1583,30 @@ function budgetApp() {
       this.$watch('ledgerAccountFilter', () => this.refreshLedger());
       this.$watch('ledgerSort', () => this.refreshLedger());
 
+      // Defensive: whenever a modal closes, sweep orphaned inert attributes
+      this.$watch(() => [
+        this.confirmModal.show,
+        this.showLockScreen,
+        this.showShortcuts,
+        this.showCategoryModal,
+        this.showExportModal,
+        this.showOpeningBalanceModal,
+        this.showRecurringModal,
+        this.showSettleModal,
+        this.showResetDataModal,
+        this.showDetailModal,
+        this.showAccountsModal,
+        this.showTransferModal
+      ].join(','), () => {
+        this.$nextTick(() => {
+          const anyOpen = this.confirmModal.show || this.showLockScreen || this.showShortcuts ||
+                          this.showCategoryModal || this.showExportModal || this.showOpeningBalanceModal ||
+                          this.showRecurringModal || this.showSettleModal || this.showResetDataModal ||
+                          this.showDetailModal || this.showAccountsModal || this.showTransferModal;
+          if (!anyOpen) this.clearOrphanInert();
+        });
+      });
+
       this._keydownHandler = (e) => {
         if (!this.isLoggedIn) return;
         const inModal = this.confirmModal.show || this.showLockScreen || this.showShortcuts ||
@@ -1707,6 +1716,11 @@ function budgetApp() {
       this.accounts = [];
       this._txsCache = [];
       this._ledgerCache = [];
+      // Reset lock state so a subsequent login isn't blocked
+      this.showLockScreen = false;
+      this.lockPassword = '';
+      this.lockError = '';
+      this.$nextTick(() => this.clearOrphanInert());
       this.showToast('Logged out', 'success');
     },
 
@@ -1719,8 +1733,9 @@ function budgetApp() {
         if (this._idleTimer) clearTimeout(this._idleTimer);
         this._idleTimer = setTimeout(() => {
           if (this.isLoggedIn) {
-            this.showLockScreen = true;
+            this.lockError = '';
             this.lockPassword = '';
+            this.showLockScreen = true;
             this.$nextTick(() => this.$refs.lockInput?.focus());
           }
         }, CONFIG.IDLE_LOCK_MS);
@@ -1735,18 +1750,64 @@ function budgetApp() {
     },
 
     async unlockSession() {
-      if (!this.user) return;
-      const hashed = await this.hashPassword(this.lockPassword);
-      if (hashed === this.user.password) {
+      this.lockError = '';
+      if (!this.user) { this.showLockScreen = false; return; }
+      if (!this.lockPassword) { this.lockError = 'Enter your password'; return; }
+
+      let hashed;
+      try {
+        hashed = await this.hashPassword(this.lockPassword);
+      } catch (e) {
+        console.error('unlock hash failed', e);
+        this.lockError = 'Unlock failed — try again';
+        return;
+      }
+
+      // Support both current user's stored hash and any user in the users list
+      // (in case the session snapshot is stale).
+      let matched = (hashed === this.user.password);
+
+      if (!matched) {
+        try {
+          const users = JSON.parse(this.lsGet('budget_users') || '[]');
+          const found = users.find(u => u.username === this.user.username);
+          if (found && found.password === hashed) {
+            matched = true;
+            this.user = found;
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      if (matched) {
+        // Set flag FIRST, then clear password, then free the body in the next tick.
         this.showLockScreen = false;
         this.lockPassword = '';
+        this.lockError = '';
+        this.$nextTick(() => this.clearOrphanInert());
+        this.showToast('Session unlocked', 'success');
       } else {
+        this.lockError = 'Incorrect password';
         this.showToast('Incorrect password', 'error');
+        this.$nextTick(() => this.$refs.lockInput?.focus());
       }
     },
 
+    /**
+     * Defensive cleanup: Alpine's x-trap (used by other modals) can leave
+     * `inert` on <body> or siblings if a modal unmounts during a trapped tick.
+     * This sweeps those attributes.
+     */
+    clearOrphanInert() {
+      try {
+        document.body.removeAttribute('inert');
+        document.body.style.overflow = '';
+        document.documentElement.removeAttribute('inert');
+        document.querySelectorAll('body > [inert]').forEach(el => el.removeAttribute('inert'));
+      } catch (e) { /* no-op */ }
+    },
+
     // ============================================================
-    // DATA LOAD / SAVE (with v2 → v3 migration)
+    // DATA LOAD / SAVE
     // ============================================================
     async loadUserData() {
       const key = `budget_data_${this.user.username}`;
@@ -1759,7 +1820,6 @@ function budgetApp() {
       const version = parsed?.version || 2;
       const txArray = parsed ? (parsed.version ? parsed.data : parsed) : [];
 
-      // Load accounts (new)
       const accRaw = this.lsGet(`accounts_${this.user.username}`);
       if (accRaw) {
         try { this.accounts = JSON.parse(accRaw); } catch { this.accounts = []; }
@@ -1767,12 +1827,10 @@ function budgetApp() {
         this.accounts = [];
       }
 
-      // Load opening balances (v2 shape: {bank, cash, investment})
       const obRaw = this.lsGet(`opening_balances_${this.user.username}`);
       let obLegacy = { bank: 0, cash: 0, investment: 0 };
       if (obRaw) { try { obLegacy = { ...obLegacy, ...JSON.parse(obRaw) }; } catch {} }
 
-      // Migration: if v2 data and no accounts yet, create a default one from bank opening
       if (version < CONFIG.DATA_VERSION && this.accounts.length === 0 && (obLegacy.bank > 0 || (Array.isArray(txArray) && txArray.some(t => t.method === 'bank')))) {
         const defaultAcc = {
           id: this.uid(),
@@ -1792,10 +1850,8 @@ function budgetApp() {
         investment: +obLegacy.investment || 0
       };
 
-      // Load txs + sanitize
       this.txs = Array.isArray(txArray) ? txArray.map(t => this.sanitizeTx(t)) : [];
 
-      // Backfill accountId on bank txs that don't have one, using first account
       const defaultAccId = this.accounts[0]?.id;
       if (defaultAccId) {
         let backfilled = 0;
@@ -1823,7 +1879,6 @@ function budgetApp() {
       const limits = this.lsGet(`budget_limits_${this.user.username}`);
       if (limits) { try { this.budgetLimits = { ...this.budgetLimits, ...JSON.parse(limits) }; } catch {} }
 
-      // Pre-select first account in forms
       if (this.accounts[0]?.id) {
         if (!this.form.accountId) this.form.accountId = this.accounts[0].id;
         if (!this.recurringForm.accountId) this.recurringForm.accountId = this.accounts[0].id;
@@ -1852,7 +1907,6 @@ function budgetApp() {
         originalTxId: t.originalTxId,
         recurringParentId: t.recurringParentId,
         notes: t.notes,
-        // transfer fields
         transferId: t.transferId,
         transferRole: t.transferRole,
         transferPairId: t.transferPairId
@@ -1910,7 +1964,7 @@ function budgetApp() {
     },
 
     // ============================================================
-    // ACCOUNTS — CRUD
+    // ACCOUNTS CRUD
     // ============================================================
     openAccountsModal() {
       this.resetAccountForm();
@@ -1937,7 +1991,6 @@ function budgetApp() {
       if (name.length > 40) { this.showToast('Name too long (max 40)', 'error'); return; }
 
       if (f.id) {
-        // Prevent duplicate names
         if (this.accounts.some(a => a.id !== f.id && a.name.toLowerCase() === name.toLowerCase())) {
           this.showToast('Account name already exists', 'error'); return;
         }
@@ -1958,7 +2011,6 @@ function budgetApp() {
           createdAt: new Date().toISOString()
         };
         this.accounts = [...this.accounts, newAcc];
-        // Auto-select for new transactions
         if (!this.form.accountId) this.form.accountId = newAcc.id;
         if (!this.recurringForm.accountId) this.recurringForm.accountId = newAcc.id;
         this.showToast('Account added', 'success');
@@ -1976,9 +2028,7 @@ function budgetApp() {
         : `Delete "${acc.name}"?`;
       this.showConfirm('Delete Account', msg, () => {
         this.accounts = this.accounts.filter(a => a.id !== id);
-        // Unassign accountId from affected txs
         this.txs = this.txs.map(t => t.accountId === id ? { ...t, accountId: null } : t);
-        // Clear forms if pointing to deleted account
         if (this.form.accountId === id) this.form.accountId = this.accounts[0]?.id || '';
         if (this.recurringForm.accountId === id) this.recurringForm.accountId = this.accounts[0]?.id || '';
         if (this.settleForm.accountId === id) this.settleForm.accountId = this.accounts[0]?.id || '';
@@ -1998,7 +2048,6 @@ function budgetApp() {
       const amt = Number(f.amount);
       if (!amt || amt <= 0) { this.showToast('Amount must be > 0', 'error'); return; }
       if (amt > this.accountBalance(f.fromAccountId) + CONFIG.AMOUNT_EPSILON) {
-        // Still allow but warn
         this.showToast('Warning: amount exceeds source balance', 'warning');
       }
 
@@ -2008,8 +2057,10 @@ function budgetApp() {
       const notes = (f.notes || '').trim();
       const suffix = notes ? ` (${notes})` : '';
 
+      const fromTxId = this.uid();
+      const toTxId = this.uid();
       const fromTx = {
-        id: this.uid(),
+        id: fromTxId,
         type: 'transfer',
         method: 'bank',
         accountId: f.fromAccountId,
@@ -2020,9 +2071,9 @@ function budgetApp() {
         settled: true,
         settledAmount: 0,
         transferId,
-        transferRole: 'from'
+        transferRole: 'from',
+        transferPairId: toTxId
       };
-      const toTxId = this.uid();
       const toTx = {
         id: toTxId,
         type: 'transfer',
@@ -2035,10 +2086,9 @@ function budgetApp() {
         settled: true,
         settledAmount: 0,
         transferId,
-        transferRole: 'to'
+        transferRole: 'to',
+        transferPairId: fromTxId
       };
-      fromTx.transferPairId = toTxId;
-      toTx.transferPairId = fromTx.id;
 
       this.txs = [...this.txs, fromTx, toTx];
       this.refreshFilteredTxs();
@@ -2154,7 +2204,6 @@ function budgetApp() {
       const tx = this.txs.find(t => t.id === id);
       if (!tx) return;
 
-      // If this is a transfer, delete BOTH legs
       if (tx.type === 'transfer' && tx.transferPairId) {
         const idx1 = this.txs.findIndex(t => t.id === tx.id);
         const idx2 = this.txs.findIndex(t => t.id === tx.transferPairId);
